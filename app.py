@@ -37,6 +37,7 @@ HTML = r"""<!DOCTYPE html>
 *{margin:0;padding:0;box-sizing:border-box}
 html,body{width:100%;height:100%;overflow:hidden}
 body{font-family:'Inter',system-ui,sans-serif;background:#0a0b0f;color:#e8eaf0}
+
 .hdr{height:34px;background:#0f1017;border-bottom:1px solid #1e2035;display:flex;align-items:center;padding:0 12px;gap:10px;flex-shrink:0}
 .logo{display:flex;align-items:center;gap:6px}
 .logo i{width:22px;height:22px;background:linear-gradient(135deg,#6366f1,#22d3ee);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;font-style:normal}
@@ -48,16 +49,23 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0a0b0f;color:#e8eaf0}
 .btn.dng{border-color:#dc2626;color:#f87171}
 .btn.on{background:#059669;color:#fff;border-color:#34d399}
 .sep{width:1px;height:14px;background:#1e2035}
+
 .filters{height:24px;background:#0d0e14;border-bottom:1px solid #1e2035;display:flex;align-items:center;gap:4px;padding:0 12px;font-size:8px;color:#565a72;flex-shrink:0;overflow-x:auto}
 .filters span{color:#565a72;text-transform:uppercase;letter-spacing:.05em;font-weight:600;white-space:nowrap}
 .fb{background:#13141e;border:1px solid #1e2035;color:#8b8fa8;padding:1px 5px;border-radius:3px;font-size:8px;font-weight:500;cursor:pointer;white-space:nowrap}
 .fb:hover{border-color:#6366f1;color:#818cf8}
 .fb.on{background:rgba(99,102,241,.15);color:#818cf8;border-color:rgba(99,102,241,.3)}
 .fb .d{display:inline-block;width:5px;height:5px;border-radius:50%;margin-right:2px;vertical-align:middle}
-.wrap{display:flex;flex-direction:column;height:calc(100vh - 58px)}
-.mid{display:flex;flex:1;min-height:0}
-.map-wrap{flex:1;position:relative}
-#map{position:absolute;top:0;left:0;width:100%;height:100%}
+
+/* LAYOUT: left column (map+table) | right panel */
+.page{display:flex;height:calc(100vh - 58px)}
+.left{flex:1;display:flex;flex-direction:column;min-width:0}
+#map{flex:1;min-height:0}
+.tbl{height:160px;border-top:1px solid #1e2035;flex-shrink:0;overflow-y:auto;overflow-x:hidden;background:#0a0b0f}
+.tbl::-webkit-scrollbar{width:4px}
+.tbl::-webkit-scrollbar-track{background:#0f1017}
+.tbl::-webkit-scrollbar-thumb{background:#2a2d45;border-radius:2px}
+
 .rpanel{width:350px;background:#0d0e14;border-left:1px solid #1e2035;display:flex;flex-direction:column;flex-shrink:0;overflow:hidden}
 .stats-box{padding:10px;border-bottom:1px solid #1e2035;flex-shrink:0}
 .stats-box h4{font-size:8px;color:#565a72;text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px}
@@ -66,6 +74,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0a0b0f;color:#e8eaf0}
 .sg .s .v{font-family:'JetBrains Mono',monospace;font-size:18px;font-weight:800;color:#818cf8}
 .sg .s .l{font-size:7px;color:#565a72;text-transform:uppercase;margin-top:2px}
 .sg .s.up .v{color:#34d399}
+
 .info-box{flex:1;overflow-y:auto;padding:10px}
 .info-box::-webkit-scrollbar{width:3px}
 .info-box::-webkit-scrollbar-thumb{background:#2a2d45;border-radius:2px}
@@ -78,10 +87,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0a0b0f;color:#e8eaf0}
 .ir .vl.cyan{color:#22d3ee}
 .route-box{margin-top:6px;padding:5px;background:#13141e;border:1px solid #1e2035;border-radius:4px;font-size:8px;color:#565a72;line-height:1.6}
 .route-box b{color:#22d3ee}
-.bottom{height:160px;border-top:1px solid #1e2035;flex-shrink:0;overflow-y:auto;overflow-x:hidden;width:65%}
-.bottom::-webkit-scrollbar{width:4px}
-.bottom::-webkit-scrollbar-track{background:#0f1017}
-.bottom::-webkit-scrollbar-thumb{background:#2a2d45;border-radius:2px}
+
 table{width:100%;border-collapse:collapse;font-size:9px}
 thead{position:sticky;top:0;z-index:2}
 th{background:#13141e;padding:3px 5px;text-align:left;font-size:7px;color:#565a72;text-transform:uppercase;letter-spacing:.05em;border-bottom:1px solid #1e2035;white-space:nowrap;cursor:pointer;user-select:none}
@@ -98,6 +104,7 @@ tr.active td{background:rgba(99,102,241,.12)!important}
 .b-Delivered{background:rgba(52,211,153,.1);color:#34d399;border:1px solid rgba(52,211,153,.15)}
 .money{font-family:'JetBrains Mono',monospace;color:#f472b6;font-weight:500;font-size:8px}
 .km{font-family:'JetBrains Mono',monospace;color:#22d3ee;font-weight:500;font-size:8px}
+
 .leaflet-popup-content-wrapper{background:#13141e!important;border:1px solid #1e2035!important;border-radius:8px!important;color:#e8eaf0!important;box-shadow:0 8px 32px rgba(0,0,0,.6)!important;min-width:220px}
 .leaflet-popup-tip{background:#13141e!important}
 .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:10px;line-height:1.5;margin:8px 10px}
@@ -135,36 +142,39 @@ tr.active td{background:rgba(99,102,241,.12)!important}
   <button class="fb" data-f="cg" data-v="fura">Fura</button>
   <button class="fb" data-f="cg" data-v="sborniy">Sbor</button>
 </div>
-<div class="wrap">
-  <div class="mid">
-    <div class="map-wrap"><div id="map"></div></div>
-    <div class="rpanel">
-      <div class="stats-box">
-        <h4>Statistics</h4>
-        <div class="sg">
-          <div class="s"><div class="v" id="sT">0</div><div class="l">Orders</div></div>
-          <div class="s up"><div class="v" id="sD">0</div><div class="l">Done</div></div>
-          <div class="s"><div class="v" id="sK">0</div><div class="l">km</div></div>
-          <div class="s"><div class="v" id="sW">0</div><div class="l">Tons</div></div>
-          <div class="s"><div class="v" id="sS">0</div><div class="l">Sum</div></div>
-          <div class="s"><div class="v" id="sF">0/0</div><div class="l">Fura/Sbor</div></div>
-        </div>
-      </div>
-      <div class="info-box" id="iBox"><div class="info-empty">Click on an order</div></div>
-    </div>
+
+<div class="page">
+  <!-- LEFT: map + table (same width) -->
+  <div class="left">
+    <div id="map"></div>
+    <div class="tbl"><table><thead><tr>
+      <th class="sh" data-c="0">No</th><th class="sh" data-c="1">Agent</th><th class="sh" data-c="2">City</th>
+      <th class="sh" data-c="3">Cargo</th><th class="sh" data-c="4">T</th><th class="sh" data-c="5">km</th>
+      <th class="sh" data-c="6">Sum</th><th class="sh" data-c="7">Status</th>
+    </tr></thead><tbody id="tB"></tbody></table></div>
   </div>
-  <div class="bottom"><table><thead><tr>
-    <th class="sh" data-c="0">No</th><th class="sh" data-c="1">Agent</th><th class="sh" data-c="2">City</th>
-    <th class="sh" data-c="3">Cargo</th><th class="sh" data-c="4">T</th><th class="sh" data-c="5">km</th>
-    <th class="sh" data-c="6">Sum</th><th class="sh" data-c="7">Status</th>
-  </tr></thead><tbody id="tB"></tbody></table></div>
+  <!-- RIGHT: stats + info -->
+  <div class="rpanel">
+    <div class="stats-box">
+      <h4>Statistics</h4>
+      <div class="sg">
+        <div class="s"><div class="v" id="sT">0</div><div class="l">Orders</div></div>
+        <div class="s up"><div class="v" id="sD">0</div><div class="l">Done</div></div>
+        <div class="s"><div class="v" id="sK">0</div><div class="l">km</div></div>
+        <div class="s"><div class="v" id="sW">0</div><div class="l">Tons</div></div>
+        <div class="s"><div class="v" id="sS">0</div><div class="l">Sum</div></div>
+        <div class="s"><div class="v" id="sF">0/0</div><div class="l">Fura/Sbor</div></div>
+      </div>
+    </div>
+    <div class="info-box" id="iBox"><div class="info-empty">Click on an order</div></div>
+  </div>
 </div>
+
 <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 var WH=[55.7558,37.6173];
 var CC=['#f472b6','#fb923c','#34d399','#22d3ee','#a78bfa','#fbbf24','#f87171','#818cf8','#c084fc','#2dd4bf','#e879f9','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
 var orders=[],autoI=null,cIdx=0,activeF='all',activeV=null,selectedNum=null;
-var openPopups={};
 
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([57,42],5);
 L.control.zoom({position:'bottomright'}).addTo(map);
@@ -265,7 +275,8 @@ function showInfo(o){
   if(o.stops&&o.stops.length>0){
     h+='<div class="route-box"><b>Route:</b> Moscow &rarr; '+o.stops.map(function(x){return x.name}).join(' &rarr; ')+'</div>';
   }
-  document.getElementById('iBox').innerHTML=h;
+  var el=document.getElementById('iBox');
+  if(el)el.innerHTML=h;
 }
 
 function addRow(o,prep){
@@ -292,7 +303,7 @@ function addRow(o,prep){
     tr.classList.add('active');
     selectedNum=num;
     routeLayer.eachLayer(function(l){if(l._n===num){l.setStyle({weight:4,opacity:1});l.bringToFront();}});
-    markerLayer.eachLayer(function(l){if(l._n===num){l.bringToFront();if(l.getPopup)l.openPopup();}});
+    markerLayer.eachLayer(function(l){if(l._n===num){l.bringToFront();try{l.openPopup();}catch(e){}}});
     showInfo(order);
   };
   var tb=document.getElementById('tB');
@@ -343,7 +354,7 @@ document.getElementById('bClear').onclick=function(){
   routeLayer.clearLayers();markerLayer.clearLayers();
   document.getElementById('tB').innerHTML='';updateStats();
   map.setView([57,42],5);
-  document.getElementById('iBox').innerHTML='<div class="info-empty">Click on an order</div>';
+  var el=document.getElementById('iBox');if(el)el.innerHTML='<div class="info-empty">Click on an order</div>';
   document.querySelectorAll('.fb').forEach(function(b){b.classList.remove('on')});
   document.querySelector('.fb[data-f="all"]').classList.add('on');
   addWh();
