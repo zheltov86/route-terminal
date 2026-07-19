@@ -342,11 +342,11 @@ function addOneOrder(){
       addWh();
       var rows=document.getElementById('tB').rows;
       for(var i=0;i<rows.length;i++){
-        if(rows[i].getAttribute('data-num')===o.number){rows[i].cells[5].textContent=o._dist;break;}
+        if(rows[i].getAttribute('data-num')===o.number){rows[i].cells[5].textContent=o._dist+' km';break;}
       }
       updateStats();
-    });
-  });
+    }).catch(function(){});
+  }).catch(function(e){console.error('addOneOrder error:',e);});
 }
 
 document.getElementById('bAdd').onclick=function(){addOneOrder();};
