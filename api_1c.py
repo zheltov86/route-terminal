@@ -1,4 +1,4 @@
-﻿"""
+"""
 1C API Service - EnterpriseData 1.8 XML upload, validation, async processing.
 Port 5001, API key: route-terminal-1c-key-2026
 """
@@ -25,7 +25,7 @@ def check_auth():
 
 @app.before_request
 def auth_middleware():
-    if request.endpoint and request.endpoint != "health" and not check_auth():
+    if request.endpoint and request.endpoint not in ("health", "index") and not check_auth():
         return jsonify({"success": False, "error": "UNAUTHORIZED", "message": "Invalid or missing API key"}), 401
 
 @app.route("/health")
@@ -121,6 +121,15 @@ def list_orders():
 @app.route("/api/refs")
 def list_refs():
     return jsonify({"success": True, "count": len(refs_db), "refs": {k: {"type": v["type"]} for k, v in refs_db.items()}})
+
+
+@app.route("/")
+def index():
+    return jsonify({"service": "1C API", "version": "1.0.0", "port": PORT,
+        "endpoints": {"POST /api/upload": "Upload XML", "GET /api/status/<task_id>": "Status",
+        "GET /api/order/<number>": "Order", "GET /api/orders": "Orders",
+        "GET /api/refs": "Refs", "GET /health": "Health"},
+        "auth": "X-API-Key", "api_key": API_KEY})
 
 if __name__ == "__main__":
     print(f"1C API on http://localhost:{PORT} | Key: {API_KEY}")

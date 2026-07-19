@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8"?>
+<Message>
+  <Header>
+    <Format>http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.8</Format>
+    <CreationDate>2026-07-19T12:00:00</CreationDate>
+    <AvailableVersion>1.8</AvailableVersion>
+  </Header>
+  <Body>
+    <Valuty><ref>7e3e0ef4-8295-11f1-8af8-04ecd881cf53</ref><name>руб.</name></Valuty>
+    <Organizacii><ref>553d56f1-8295-11f1-8af8-04ecd881cf53</ref><name>Org1</name></Organizacii>
+    <Kontragenty><ref>a1b2c3d4-e5f6-7890-abcd-ef1234567890</ref><name>Client1</name></Kontragenty>
+    <order>
+      <number>ZK-12345-26</number>
+      <date>2026-07-19</date>
+      <amount>50000</amount>
+    </order>
+    <order>
+      <number>ZK-67890-26</number>
+      <date>2026-07-19</date>
+      <amount>75000</amount>
+    </order>
+  </Body>
+</Message>
