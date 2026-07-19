@@ -95,7 +95,8 @@ th:hover{color:#818cf8}
 td{padding:3px 5px;border-bottom:1px solid rgba(30,32,53,.3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100px}
 tr{transition:background .1s;cursor:pointer}
 tr:hover td{background:rgba(99,102,241,.06)}
-tr.active td{background:rgba(99,102,241,.12)!important}
+tr.hl td{background:rgba(99,102,241,.15)!important}
+tr.active td{background:rgba(52,211,153,.1)!important}
 .badge{display:inline-block;padding:0 3px;border-radius:2px;font-size:7px;font-weight:600}
 .b-New{background:rgba(129,140,248,.1);color:#818cf8;border:1px solid rgba(129,140,248,.15)}
 .b-Processing{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.15)}
@@ -166,19 +167,7 @@ tr.active td{background:rgba(99,102,241,.12)!important}
         <div class="s"><div class="v" id="sF">0/0</div><div class="l">Fura/Sbor</div></div>
       </div>
     </div>
-    <div class="info-box" id="iBox">
-      <div class="info-hdr">ZK-48291-26</div>
-      <div class="ir"><span class="lb">Agent</span><span class="vl">OOO TechnoProm</span></div>
-      <div class="ir"><span class="lb">City</span><span class="vl">Voronezh</span></div>
-      <div class="ir"><span class="lb">Cargo</span><span class="vl">Electronics (Fura)</span></div>
-      <div class="ir"><span class="lb">Weight</span><span class="vl">18.3 t</span></div>
-      <div class="ir"><span class="lb">Distance</span><span class="vl cyan">523 km</span></div>
-      <div class="ir"><span class="lb">Duration</span><span class="vl cyan">6.5 h</span></div>
-      <div class="ir"><span class="lb">Sum</span><span class="vl pink">343,058 rub</span></div>
-      <div class="ir"><span class="lb">Status</span><span class="vl"><span class="badge b-InTransit">InTransit</span></span></div>
-      <div class="ir"><span class="lb">Date</span><span class="vl">2026-07-19</span></div>
-      <div class="route-box"><b>Route:</b> Moscow &rarr; Voronezh</div>
-    </div>
+    <div class="info-box" id="iBox"><div class="info-empty">Hover on route or click row</div></div>
   </div>
 </div>
 
@@ -246,6 +235,17 @@ function drawRoute(o){
   if(o._coords&&o._coords.length>=2){
     var ln=L.polyline(o._coords,{color:color,weight:2.5,opacity:0.9}).addTo(routeLayer);
     ln._n=o.number;
+    var num=o.number;
+    ln.on('mouseover',function(){
+      ln.setStyle({weight:4,opacity:1});ln.bringToFront();
+      highlightRow(num,true);
+      if(selectedNum===null)showInfo(findO(num));
+    });
+    ln.on('mouseout',function(){
+      ln.setStyle({weight:2.5,opacity:0.9});
+      highlightRow(num,false);
+      if(selectedNum===null){var el=document.getElementById('iBox');if(el)el.innerHTML='<div class="info-empty">Hover on route or click row</div>';}
+    });
   }
   if(o.stops){
     o.stops.forEach(function(s,i){
@@ -289,6 +289,19 @@ function showInfo(o){
     +'<div class="route-box"><b>Route:</b> Moscow &rarr; '+(o.stops?o.stops.map(function(x){return x.name}).join(' &rarr; '):o.city)+'</div>';
 }
 
+function findO(num){for(var i=0;i<orders.length;i++){if(orders[i].number===num)return orders[i];}return null;}
+
+function highlightRow(num,on){
+  var rows=document.getElementById('tB').rows;
+  for(var i=0;i<rows.length;i++){
+    if(rows[i].getAttribute('data-num')===num){
+      if(on){rows[i].classList.add('hl');rows[i].scrollIntoView({block:'nearest',behavior:'smooth'});}
+      else{rows[i].classList.remove('hl');}
+      break;
+    }
+  }
+}
+
 function addRow(o,prep){
   var st=o.status||'New';
   var ct=o.cargo_type==='sborniy'?'ctag-s':'ctag-f';
@@ -308,6 +321,14 @@ function addRow(o,prep){
   tr.innerHTML=h;
   var num=o.number;
   var order=o;
+  tr.onmouseenter=function(){
+    highlightRow(num,true);
+    if(selectedNum===null)showInfo(order);
+  };
+  tr.onmouseleave=function(){
+    highlightRow(num,false);
+    if(selectedNum===null){var el=document.getElementById('iBox');if(el)el.innerHTML='<div class="info-empty">Hover on route or click row</div>';}
+  };
   tr.onclick=function(){
     document.querySelectorAll('#tB tr.active').forEach(function(r){r.classList.remove('active')});
     tr.classList.add('active');
