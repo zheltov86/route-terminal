@@ -271,6 +271,23 @@ function drawRoute(o){
   }
 }
 
+function showInfo(o){
+  var st=o.status||'New';
+  var ct=o.cargo_type==='sborniy'?'Sbor':'Fura';
+  var el=document.getElementById('iBox');
+  if(!el)return;
+  el.innerHTML='<div class="info-hdr">'+o.number+'</div>'
+    +'<div class="ir"><span class="lb">Agent</span><span class="vl">'+o.counteragent+'</span></div>'
+    +'<div class="ir"><span class="lb">City</span><span class="vl">'+o.city+'</span></div>'
+    +'<div class="ir"><span class="lb">Cargo</span><span class="vl">'+o.cargo+' ('+ct+')</span></div>'
+    +'<div class="ir"><span class="lb">Weight</span><span class="vl">'+o.weight+' t</span></div>'
+    +'<div class="ir"><span class="lb">Distance</span><span class="vl cyan">'+(o._dist||'...')+' km</span></div>'
+    +'<div class="ir"><span class="lb">Duration</span><span class="vl cyan">'+(o._dur||'...')+' h</span></div>'
+    +'<div class="ir"><span class="lb">Sum</span><span class="vl pink">'+o.sum.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Status</span><span class="vl"><span class="badge b-'+st+'">'+st+'</span></span></div>'
+    +'<div class="ir"><span class="lb">Date</span><span class="vl">'+o.date+'</span></div>'
+    +'<div class="route-box"><b>Route:</b> Moscow &rarr; '+(o.stops?o.stops.map(function(x){return x.name}).join(' &rarr; '):o.city)+'</div>';
+}
 
 function addRow(o,prep){
   var st=o.status||'New';
@@ -297,6 +314,7 @@ function addRow(o,prep){
     selectedNum=num;
     routeLayer.eachLayer(function(l){if(l._n===num){l.setStyle({weight:4,opacity:1});l.bringToFront();}});
     markerLayer.eachLayer(function(l){if(l._n===num){l.bringToFront();try{l.openPopup();}catch(e){}}});
+    showInfo(order);
   };
   var tb=document.getElementById('tB');
   if(prep)tb.insertBefore(tr,tb.firstChild);else tb.appendChild(tr);
