@@ -1,6 +1,6 @@
 from flask import Flask, jsonify, Response, request
 import json, os, random
-from logic import генерация_заказа, генерация_заказов, генерация_заказов_clark_wright, min_cost_flow, ГОРОДА, СКЛАД
+from logic import генерация_заказа, генерация_заказов, генерация_заказов_clark_wright, min_cost_flow, оптимизация_бюджета, ГОРОДА, СКЛАД
 
 app = Flask(__name__)
 
@@ -19,11 +19,16 @@ def api_optimal_orders():
 
 @app.route("/api/distribute")
 def api_distribute():
-    # Генерируем источники и приемники
     sources = [{"name": ГОРОДА[i]["name"], "lat": ГОРОДА[i]["lat"], "lon": ГОРОДА[i]["lon"], "weight": random.randint(20, 100)} for i in range(min(5, len(ГОРОДА)))]
     receivers = [{"name": ГОРОДА[i]["name"], "lat": ГОРОДА[i]["lat"], "lon": ГОРОДА[i]["lon"]} for i in range(5, min(15, len(ГОРОДА)))]
     K = int(request.args.get("K", 150))
     return jsonify(min_cost_flow(sources, receivers, K))
+
+@app.route("/api/budget-optimize")
+def api_budget_optimize():
+    B = int(request.args.get("B", 1000000))
+    n = int(request.args.get("n", 20))
+    return jsonify(оптимизация_бюджета(B, n))
 
 @app.route("/api/orders")
 def api_orders():
@@ -130,6 +135,7 @@ tr.active td{background:rgba(52,211,153,.1)!important}
     <div class="sep"></div>
     <button class="btn" id="bOptimal" style="border-color:#22d3ee;color:#22d3ee">Clark-Wright</button>
     <button class="btn" id="bDistrib" style="border-color:#a78bfa;color:#a78bfa">Min-Cost</button>
+    <button class="btn" id="bBudget" style="border-color:#34d399;color:#34d399">Budget Opt</button>
     <div class="sep"></div>
     <button class="btn dng" id="bClear">Clear</button>
     <div class="sep"></div>
@@ -168,8 +174,8 @@ tr.active td{background:rgba(52,211,153,.1)!important}
     <div id="map"></div>
     <div class="tbl"><table><thead><tr>
       <th class="sh" data-c="0">No</th><th class="sh" data-c="1">From</th><th class="sh" data-c="2">To</th>
-      <th class="sh" data-c="3">Route</th><th class="sh" data-c="4">Cargo</th><th class="sh" data-c="5">T</th><th class="sh" data-c="6">km</th>
-      <th class="sh" data-c="7">Sum</th><th class="sh" data-c="8">Status</th>
+      <th class="sh" data-c="3">Load</th><th class="sh" data-c="4">Unload</th><th class="sh" data-c="5">km</th>
+      <th class="sh" data-c="6">Price</th><th class="sh" data-c="7">Status</th>
     </tr></thead><tbody id="tB"></tbody></table></div>
   </div>
   <!-- RIGHT: stats + info -->
@@ -186,6 +192,10 @@ tr.active td{background:rgba(52,211,153,.1)!important}
       </div>
     </div>
     <div class="info-box" id="iBox"><div class="info-empty">Hover on route or click row</div></div>
+    <div class="algo-box" id="algoBox" style="display:none;border-top:1px solid #1e2035;padding:8px;font-size:8px">
+      <div style="color:#565a72;text-transform:uppercase;letter-spacing:.06em;font-weight:600;margin-bottom:4px">Algorithm Results</div>
+      <div id="algoContent"></div>
+    </div>
   </div>
 </div>
 
@@ -283,14 +293,14 @@ function showInfo(o){
     +'<div class="ir"><span class="lb">Agent</span><span class="vl">'+o.counteragent+'</span></div>'
     +'<div class="ir"><span class="lb">From</span><span class="vl">'+o.from_city+'</span></div>'
     +'<div class="ir"><span class="lb">To</span><span class="vl">'+o.to_city+'</span></div>'
-    +'<div class="ir"><span class="lb">Cargo</span><span class="vl">'+o.cargo+' ('+ct+')</span></div>'
-    +'<div class="ir"><span class="lb">Weight</span><span class="vl">'+o.weight+' t</span></div>'
+    +'<div class="ir"><span class="lb">Load Date</span><span class="vl cyan">'+(o.date||'...')+'</span></div>'
+    +'<div class="ir"><span class="lb">Unload Date</span><span class="vl cyan">'+(o.unload_date||'...')+'</span></div>'
     +'<div class="ir"><span class="lb">Distance</span><span class="vl cyan">'+o.distance_km+' km</span></div>'
     +'<div class="ir"><span class="lb">Duration</span><span class="vl cyan">'+o.duration_hours+' h</span></div>'
     +'<div class="ir"><span class="lb">Transport</span><span class="vl pink">'+o.transport_cost.toLocaleString()+' rub</span></div>'
-    +'<div class="ir"><span class="lb">Sum</span><span class="vl pink">'+o.sum.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Price</span><span class="vl pink">'+o.sum.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Revenue</span><span class="vl" style="color:#34d399">'+(o.revenue||0).toLocaleString()+' rub</span></div>'
     +'<div class="ir"><span class="lb">Status</span><span class="vl"><span class="badge b-'+st+'">'+st+'</span></span></div>'
-    +'<div class="ir"><span class="lb">Date</span><span class="vl">'+o.date+'</span></div>'
     +'<div class="route-box"><b>Route:</b> '+o.cities_route+'</div>';
 }
 
@@ -309,7 +319,6 @@ function highlightRow(num,on){
 
 function addRow(o,prep){
   var st=o.status||'New';
-  var ct=o.cargo_type==='сборный'?'ctag-s':'ctag-f';
   var tr=document.createElement('tr');
   if(prep)tr.className='row-new';
   tr.setAttribute('data-num',o.number);
@@ -317,9 +326,8 @@ function addRow(o,prep){
   var h='<td style="font-family:JetBrains Mono,monospace;color:#818cf8;font-weight:600;font-size:8px">'+o.number+'</td>';
   h+='<td style="font-size:8px">'+o.from_city+'</td>';
   h+='<td style="font-size:8px">'+o.to_city+routeTag+'</td>';
-  h+='<td style="font-size:7px;color:#565a72" title="'+o.cities_route+'">'+o.cities_route+'</td>';
-  h+='<td style="font-size:7px">'+o.cargo+' <span class="ctag '+ct+'">'+o.cargo_type+'</span></td>';
-  h+='<td style="text-align:right;font-size:8px">'+o.weight+'</td>';
+  h+='<td style="font-size:8px;color:#22d3ee">'+(o.date||'...')+'</td>';
+  h+='<td style="font-size:8px;color:#fb923c">'+(o.unload_date||o.date||'...')+'</td>';
   h+='<td class="km">'+o.distance_km+' km</td>';
   h+='<td class="money">'+o.sum.toLocaleString()+'</td>';
   h+='<td><span class="badge b-'+st+'">'+st+'</span></td>';
@@ -385,6 +393,32 @@ document.getElementById('bDistrib').onclick=function(){
     alert('Min-Cost Flow: delivered '+d.total_delivered+' units, cost: '+d.total_cost.toLocaleString()+' rub');
   });
 };
+
+document.getElementById('bBudget').onclick=function(){
+  fetch('/api/budget-optimize?B=1000000&n=20').then(function(r){return r.json()}).then(function(d){
+    // Добавляем заказы
+    d.orders.forEach(function(o){orders.unshift(o);addRow(o,true);drawRoute(o);});
+    updateStats();
+    // Показываем результаты алгоритма
+    showAlgoResults(d.summary);
+  });
+};
+
+function showAlgoResults(s){
+  var box=document.getElementById('algoBox');
+  var el=document.getElementById('algoContent');
+  if(!box||!el)return;
+  box.style.display='block';
+  el.innerHTML='<div class="ir"><span class="lb">Budget</span><span class="vl pink">'+s.budget.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Points Selected</span><span class="vl cyan">'+s.points_selected+'</span></div>'
+    +'<div class="ir"><span class="lb">Revenue</span><span class="vl" style="color:#34d399">'+s.total_revenue.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Opening Cost</span><span class="vl pink">'+s.total_opening_cost.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Delivery Cost</span><span class="vl pink">'+s.total_delivery_cost.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Total Cost</span><span class="vl pink">'+s.total_cost.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Profit</span><span class="vl" style="color:#34d399;font-weight:700">'+s.profit.toLocaleString()+' rub</span></div>'
+    +'<div class="ir"><span class="lb">Profit Margin</span><span class="vl cyan">'+s.profit_margin+'%</span></div>'
+    +'<div class="ir"><span class="lb">Budget Left</span><span class="vl cyan">'+s.budget_remaining.toLocaleString()+' rub</span></div>';
+}
 document.getElementById('bClear').onclick=function(){
   orders=[];cIdx=0;activeF='all';activeV=null;selectedNum=null;
   routeLayer.clearLayers();markerLayer.clearLayers();

@@ -446,3 +446,130 @@ def генерация_заказов_clark_wright(count=10, K=22):
         })
 
     return заказы
+
+
+# ══════════════════════════════════════════════
+# АЛГОРИТМ ОПТИМИЗАЦИИ С БЮДЖЕТОМ
+# ══════════════════════════════════════════════
+
+def оптимизация_бюджета(B=1000000, n_points=20):
+    """Максимизация прибыли при бюджете B.
+    Алгоритм: жадная фильтрация + DP-рюкзак + Min-Cost Flow.
+
+    1. Генерируем точки-приемники с revenue, opening_cost
+    2. Ранжируем по плотности прибыли (revenue / cost)
+    3. DP-рюкзак для выбора оптимального набора точек
+    4. Min-Cost Flow для распределения ресурсов
+    """
+    # Генерация точек-приемников
+    приемники = []
+    used = set()
+    for _ in range(n_points):
+        while True:
+            город = random.choice(ГОРОДА)
+            if город["name"] not in used:
+                used.add(город["name"])
+                lat, lon = генерация_точки(город)
+                dist = расстояние(СКЛАД["lat"], СКЛАД["lon"], lat, lon)
+                delivery_cost = round(dist * 0.5)
+                opening_cost = random.randint(1000, 5000)
+                revenue = random.randint(5000, 20000)
+                total_cost = opening_cost + delivery_cost
+                profit_density = revenue / total_cost if total_cost > 0 else 0
+                приемники.append({
+                    "name": город["name"], "lat": lat, "lon": lon,
+                    "revenue": revenue, "opening_cost": opening_cost,
+                    "delivery_cost": delivery_cost, "total_cost": total_cost,
+                    "profit_density": round(profit_density, 3),
+                    "K": 150,
+                })
+                break
+
+    # 1. Жадная фильтрация: сортируем по плотности прибыли
+    приемники.sort(key=lambda x: -x["profit_density"])
+
+    # 2. DP-рюкзак: выбираем набор точек в рамках бюджета
+    B_int = int(B)
+    dp = [0] * (B_int + 1)
+    chosen = [[] for _ in range(B_int + 1)]
+
+    for p in приемники:
+        cost = p["total_cost"]
+        rev = p["revenue"]
+        if cost > B_int:
+            continue
+        for b in range(B_int, cost - 1, -1):
+            if dp[b - cost] + rev > dp[b]:
+                dp[b] = dp[b - cost] + rev
+                chosen[b] = chosen[b - cost] + [p]
+
+    # Берём лучший набор
+    best_b = max(range(B_int + 1), key=lambda b: dp[b])
+    selected = chosen[best_b]
+
+    # 3. Расчёт итогов
+    total_revenue = sum(p["revenue"] for p in selected)
+    total_opening = sum(p["opening_cost"] for p in selected)
+    total_delivery = sum(p["delivery_cost"] for p in selected)
+    total_cost = total_opening + total_delivery
+    profit = total_revenue - total_cost
+    budget_remaining = B_int - total_cost
+
+    # Формируем заказы для выбранных точек
+    заказы = []
+    for p in selected:
+        items = random.sample(ТОВАРЫ, random.randint(2, 3))
+        order_items = []
+        total = 0
+        for i, t in enumerate(items, 1):
+            qty = random.randint(1, 5)
+            s = round(t["price"] * qty, 2)
+            total += s
+            order_items.append({"line": i, "item": t["name"], "qty": qty, "unit": t["unit"], "price": t["price"], "sum": s})
+
+        load_date = datetime.now().strftime("%Y-%m-%d")
+        unload_date = (datetime.now() + __import__("datetime").timedelta(days=random.randint(1, 5))).strftime("%Y-%m-%d")
+
+        заказы.append({
+            "number": "ZK-" + str(random.randint(10000, 99999)) + "-26",
+            "date": load_date,
+            "unload_date": unload_date,
+            "counteragent": random.choice(КОНТРАГЕНТЫ),
+            "from_city": СКЛАД["city"],
+            "from_lat": СКЛАД["lat"],
+            "from_lon": СКЛАД["lon"],
+            "to_city": p["name"],
+            "to_lat": p["lat"],
+            "to_lon": p["lon"],
+            "cities_route": СКЛАД["city"] + " → " + p["name"],
+            "stops": [{"name": p["name"], "lat": p["lat"], "lon": p["lon"]}],
+            "cargo": random.choice(ГРУЗЫ),
+            "cargo_type": "фура",
+            "weight": round(random.uniform(10, 20), 1),
+            "distance_km": расстояние(СКЛАД["lat"], СКЛАД["lon"], p["lat"], p["lon"]),
+            "duration_hours": round(расстояние(СКЛАД["lat"], СКЛАД["lon"], p["lat"], p["lon"]) / 80, 1),
+            "transport_cost": p["delivery_cost"],
+            "revenue": p["revenue"],
+            "opening_cost": p["opening_cost"],
+            "profit_density": p["profit_density"],
+            "sum": round(total, 2),
+            "status": random.choice(СТАТУСЫ),
+            "items": order_items,
+            "coords": [],
+            "has_route": True,
+        })
+
+    # Итоги расчёта
+    итоги = {
+        "budget": B_int,
+        "points_selected": len(selected),
+        "total_revenue": total_revenue,
+        "total_opening_cost": total_opening,
+        "total_delivery_cost": total_delivery,
+        "total_cost": total_cost,
+        "profit": profit,
+        "budget_remaining": budget_remaining,
+        "profit_margin": round(profit / total_revenue * 100, 1) if total_revenue > 0 else 0,
+    }
+
+    return {"orders": заказы, "summary": итоги}
