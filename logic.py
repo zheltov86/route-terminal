@@ -1,9 +1,12 @@
 """
 logic.py — Изолированный модуль алгоритмов расчёта.
 Все данные генерируются здесь. app.py только обращается за данными.
+Маршруты: A → B → C ... (любые города связаны).
+Расстояния через OSRM (OpenStreetMap Routing).
 """
 import random
 import math
+import requests
 from datetime import datetime
 
 # ─── Справочники ───
@@ -75,7 +78,7 @@ from datetime import datetime
 # ─── Алгоритмы расчёта ───
 
 def расстояние(lat1, lon1, lat2, lon2):
-    """Расчёт расстояния между двумя точками (формула гаверсинусов), км."""
+    """Расчёт расстояния (формула гаверсинусов), км."""
     R = 6371
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -83,8 +86,33 @@ def расстояние(lat1, lon1, lat2, lon2):
     return round(R * 2 * math.asin(math.sqrt(a)), 1)
 
 
+def osrm_route(lat1, lon1, lat2, lon2):
+    """Получить маршрут через OSRM: расстояние, время, координаты polyline."""
+    try:
+        url = f"https://router.project-osrm.org/route/v1/driving/{lon1},{lat1};{lon2},{lat2}?overview=full&geometries=geojson"
+        r = requests.get(url, timeout=10)
+        d = r.json()
+        if d.get("code") == "Ok" and d.get("routes"):
+            route = d["routes"][0]
+            coords = [[c[1], c[0]] for c in route["geometry"]["coordinates"]]
+            return {
+                "distance_km": round(route["distance"] / 1000, 1),
+                "duration_hours": round(route["duration"] / 3600, 1),
+                "coords": coords,
+            }
+    except Exception:
+        pass
+    # Fallback: прямая линия
+    dist = расстояние(lat1, lon1, lat2, lon2)
+    return {
+        "distance_km": dist,
+        "duration_hours": round(dist / 80, 1),
+        "coords": [[lat1, lon1], [lat2, lon2]],
+    }
+
+
 def стоимость_перевозки(distance_km, weight_t):
-    """Алгоритм расчёта стоимости перевозки по тарифу фуры."""
+    """Тариф перевозки."""
     if distance_km < 100: rate = 55
     elif distance_km < 300: rate = 45
     elif distance_km < 500: rate = 42
@@ -97,27 +125,70 @@ def стоимость_перевозки(distance_km, weight_t):
 
 
 def время_в_пути(distance_km):
-    """Расчёт времени в пути (средняя скорость 80 км/ч), часов."""
+    """Время в пути (80 км/ч), часов."""
     return round(distance_km / 80, 1)
+
+
+# ─── Маршруты ───
+
+def построить_маршрут(точки):
+    """Построить маршрут через список точек A → B → C ...
+    Возвращает общее расстояние, время, координаты polyline."""
+    if len(точки) < 2:
+        return {"distance_km": 0, "duration_hours": 0, "coords": []}
+
+    all_coords = []
+    total_dist = 0
+    total_time = 0
+
+    for i in range(len(точки) - 1):
+        a, b = точки[i], точки[i + 1]
+        seg = osrm_route(a["lat"], a["lon"], b["lat"], b["lon"])
+        if all_coords and seg["coords"]:
+            seg["coords"] = seg["coords"][1:]  # убрать дубль точки
+        all_coords.extend(seg["coords"])
+        total_dist += seg["distance_km"]
+        total_time += seg["duration_hours"]
+
+    return {
+        "distance_km": round(total_dist, 1),
+        "duration_hours": round(total_time, 1),
+        "coords": all_coords,
+    }
 
 
 # ─── Генераторы ───
 
 def генерация_точки(город):
-    """Случайная точка рядом с городом (радиус ~3 км)."""
+    """Случайная точка рядом с городом (~3 км)."""
     lat = город["lat"] + random.uniform(-0.03, 0.03)
     lon = город["lon"] + random.uniform(-0.03, 0.03)
     return round(lat, 6), round(lon, 6)
 
 
 def генерация_заказа():
-    """Генерация одного заказа: пункт А (склад) → пункт Б (город назначения)."""
-    город = random.choice(ГОРОДА)
-    lat, lon = генерация_точки(город)
-    дистанция = расстояние(СКЛАД["lat"], СКЛАД["lon"], lat, lon)
+    """Генерация заказа: A → B (→ C ...) через разные города.
+    Любые города могут быть связаны, не только из склада."""
+    num_stops = random.choices([1, 2, 3], weights=[0.5, 0.35, 0.15])[0]
+    used = set()
+    stops = []
+
+    for _ in range(num_stops):
+        while True:
+            город = random.choice(ГОРОДА)
+            if город["name"] not in used:
+                used.add(город["name"])
+                lat, lon = генерация_точки(город)
+                stops.append({"name": город["name"], "lat": lat, "lon": lon})
+                break
+
+    # Маршрут: Склад → Город1 → Город2 → ...
+    route_points = [{"name": СКЛАД["city"], "lat": СКЛАД["lat"], "lon": СКЛАД["lon"]}] + stops
+    route = построить_маршрут(route_points)
+
+    final = stops[-1]
     вес = round(random.uniform(10, 22), 1)
-    стоимость = стоимость_перевозки(дистанция, вес)
-    время = время_в_пути(дистанция)
+    стоимость = стоимость_перевозки(route["distance_km"], вес)
 
     items = random.sample(ТОВАРЫ, random.randint(2, 5))
     order_items = []
@@ -133,26 +204,34 @@ def генерация_заказа():
     cargo = " + ".join(random.sample(ГРУЗЫ, random.randint(2, 3))) if is_sbor else random.choice(ГРУЗЫ)
     weight = round(random.uniform(3, 12), 1) if is_sbor else вес
 
+    # Формируем строку "Откуда → Куда"
+    from_city = СКЛАД["city"]
+    to_city = final["name"]
+    cities_route = " → ".join([СКЛАД["city"]] + [s["name"] for s in stops])
+
     return {
         "number": "ZK-" + str(random.randint(10000, 99999)) + "-26",
         "date": datetime.now().strftime("%Y-%m-%d"),
         "counteragent": random.choice(КОНТРАГЕНТЫ),
-        "from_city": СКЛАД["city"],
+        "from_city": from_city,
         "from_lat": СКЛАД["lat"],
         "from_lon": СКЛАД["lon"],
-        "city": город["name"],
-        "lat": lat,
-        "lon": lon,
+        "to_city": to_city,
+        "to_lat": final["lat"],
+        "to_lon": final["lon"],
+        "cities_route": cities_route,
+        "stops": stops,
         "cargo": cargo,
         "cargo_type": cargo_type,
         "weight": weight,
-        "distance_km": дистанция,
-        "duration_hours": время,
+        "distance_km": route["distance_km"],
+        "duration_hours": route["duration_hours"],
         "transport_cost": стоимость,
         "sum": round(total, 2),
         "status": random.choice(СТАТУСЫ),
         "items": order_items,
-        "has_route": not is_sbor,  # Сборные заказы — без маршрута, просто точка
+        "coords": route["coords"],
+        "has_route": not is_sbor,
     }
 
 
@@ -162,7 +241,7 @@ def генерация_заказов(count=1):
 
 
 def получить_города():
-    """Список всех городов для справочника."""
+    """Список городов."""
     return ГОРОДА
 
 

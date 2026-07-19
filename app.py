@@ -1,4 +1,4 @@
-﻿from flask import Flask, jsonify, Response
+from flask import Flask, jsonify, Response
 import json, os
 from logic import генерация_заказа, генерация_заказов
 
@@ -150,9 +150,9 @@ tr.active td{background:rgba(52,211,153,.1)!important}
   <div class="left">
     <div id="map"></div>
     <div class="tbl"><table><thead><tr>
-      <th class="sh" data-c="0">No</th><th class="sh" data-c="1">Agent</th><th class="sh" data-c="2">City</th>
-      <th class="sh" data-c="3">Cargo</th><th class="sh" data-c="4">T</th><th class="sh" data-c="5">km</th>
-      <th class="sh" data-c="6">Sum</th><th class="sh" data-c="7">Status</th>
+      <th class="sh" data-c="0">No</th><th class="sh" data-c="1">From</th><th class="sh" data-c="2">To</th>
+      <th class="sh" data-c="3">Route</th><th class="sh" data-c="4">Cargo</th><th class="sh" data-c="5">T</th><th class="sh" data-c="6">km</th>
+      <th class="sh" data-c="7">Sum</th><th class="sh" data-c="8">Status</th>
     </tr></thead><tbody id="tB"></tbody></table></div>
   </div>
   <!-- RIGHT: stats + info -->
@@ -189,32 +189,9 @@ function addWh(){
 }
 addWh();
 
-function osrm(a,b){
-  return fetch('https://router.project-osrm.org/route/v1/driving/'+a[1]+','+a[0]+';'+b[1]+','+b[0]+'?overview=full&geometries=geojson')
-    .then(function(r){return r.json()})
-    .then(function(d){
-      if(d.code==='Ok'&&d.routes&&d.routes[0]){var r=d.routes[0];var c=r.geometry.coordinates.map(function(p){return[p[1],p[0]]});return{coords:c,dist:Math.round(r.distance/1000),dur:Math.round(r.duration/3600*10)/10};}
-      return null;
-    }).catch(function(){return null});
-}
-
-function buildRoute(stops){
-  var pts=[WH];stops.forEach(function(s){pts.push([s.lat,s.lon]);});
-  var allC=[],td=0,tu=0,i=0;
-  function next(){
-    if(i>=pts.length-1)return Promise.resolve({coords:allC,dist:td,dur:tu});
-    return osrm(pts[i],pts[i+1]).then(function(r){
-      if(r){if(i>0&&r.coords.length>0)r.coords=r.coords.slice(1);allC=allC.concat(r.coords);td+=r.dist;tu+=r.dur;}
-      else{allC.push(pts[i],pts[i+1]);var dx=pts[i+1][0]-pts[i][0],dy=pts[i+1][1]-pts[i][1];td+=Math.round(Math.sqrt(dx*dx+dy*dy)*111);tu+=Math.round(Math.sqrt(dx*dx+dy*dy)*111/80*10)/10;}
-      i++;return next();
-    });
-  }
-  return next();
-}
-
 function updateStats(){
   var n=orders.length,dl=0,km=0,tn=0,sm=0,fu=0,sb=0;
-  orders.forEach(function(o){if(o.status==='Delivered')dl++;km+=o._dist||0;tn+=o.weight;sm+=o.sum;if(o.cargo_type==='fura')fu++;else sb++;});
+  orders.forEach(function(o){if(o.status==='Delivered')dl++;km+=o.distance_km||0;tn+=o.weight;sm+=o.sum;if(o.cargo_type==='фура')fu++;else sb++;});
   document.getElementById('sT').textContent=n;
   document.getElementById('sD').textContent=dl;
   document.getElementById('sK').textContent=Math.round(km).toLocaleString();
@@ -237,10 +214,9 @@ function drawRoute(o){
   var st=o.status||'New';
   var num=o.number;
 
-  // Маршрут: фура — линия от склада до назначения
-  if(o.has_route!==false){
-    var coords=[[WH[0],WH[1]],[o.lat,o.lon]];
-    var ln=L.polyline(coords,{color:color,weight:2.5,opacity:0.9}).addTo(routeLayer);
+  // Маршрут: фура — линия по координатам из OSRM
+  if(o.has_route!==false && o.coords && o.coords.length>=2){
+    var ln=L.polyline(o.coords,{color:color,weight:2.5,opacity:0.9}).addTo(routeLayer);
     ln._n=o.number;
     ln.on('mouseover',function(){
       ln.setStyle({weight:4,opacity:1});ln.bringToFront();
@@ -254,25 +230,31 @@ function drawRoute(o){
     });
   }
 
-  // Маркер назначения
-  var popupHtml='<div class="lp-t">'+o.number+(o.has_route===false?' <span style="color:#fb923c;font-size:9px">[sbor]</span>':'')+'</div>'
-    +'<div class="lp-r"><span class="a">Agent</span><span class="b">'+o.counteragent+'</span></div>'
-    +'<div class="lp-r"><span class="a">From</span><span class="b">'+(o.from_city||'Moscow')+'</span></div>'
-    +'<div class="lp-r"><span class="a">To</span><span class="b">'+o.city+'</span></div>'
-    +'<div class="lp-r"><span class="a">Cargo</span><span class="b">'+o.cargo+' ('+ct+')</span></div>'
-    +'<div class="lp-r"><span class="a">Weight</span><span class="b">'+o.weight+' t</span></div>'
-    +'<div class="lp-r"><span class="a">Distance</span><span class="b cy">'+(o.distance_km||'...')+' km</span></div>'
-    +'<div class="lp-r"><span class="a">Duration</span><span class="b cy">'+(o.duration_hours||'...')+' h</span></div>'
-    +'<div class="lp-r"><span class="a">Transport</span><span class="b pk">'+(o.transport_cost||0).toLocaleString()+' rub</span></div>'
-    +'<div class="lp-r"><span class="a">Sum</span><span class="b pk">'+o.sum.toLocaleString()+' rub</span></div>'
-    +'<div class="lp-r"><span class="a">Status</span><span class="b"><span class="badge b-'+st+'">'+st+'</span></span></div>'
-    +'<div class="lp-r"><span class="a">Date</span><span class="b">'+o.date+'</span></div>';
-
-  var markerSize=o.has_route===false?12:9;
-  var markerColor=o.has_route===false?'#fb923c':color;
-  var mk=L.marker([o.lat,o.lon],{icon:L.divIcon({html:'<div style="width:'+markerSize+'px;height:'+markerSize+'px;background:'+markerColor+';border-radius:50%;border:2px solid rgba(255,255,255,0.8);box-shadow:0 0 8px '+markerColor+'80"></div>',className:'',iconSize:[markerSize,markerSize],iconAnchor:[Math.ceil(markerSize/2),Math.ceil(markerSize/2)]})}).addTo(markerLayer);
-  mk._n=o.number;
-  mk.bindPopup(popupHtml,{maxWidth:280,className:'dark-popup'});
+  // Маркеры: начальная точка + промежуточные + конечная
+  if(o.stops && o.stops.length>0){
+    for(var i=0;i<o.stops.length;i++){
+      var s=o.stops[i];
+      var last=i===o.stops.length-1;
+      var mc=last?color:'#ffffff';
+      var ms=last?10:7;
+      var mk=L.marker([s.lat,s.lon],{icon:L.divIcon({html:'<div style="width:'+ms+'px;height:'+ms+'px;background:'+mc+';border-radius:50%;border:2px solid rgba(255,255,255,'+(last?1:0.5)+');box-shadow:0 0 6px '+mc+'80"></div>',className:'',iconSize:[ms,ms],iconAnchor:[Math.ceil(ms/2),Math.ceil(ms/2)]})}).addTo(markerLayer);
+      mk._n=o.number;
+      mk.bindPopup(
+        '<div class="lp-t">'+o.number+(o.has_route===false?' <span style="color:#fb923c;font-size:9px">[sbor]</span>':'')+'</div>'
+        +'<div class="lp-r"><span class="a">Agent</span><span class="b">'+o.counteragent+'</span></div>'
+        +'<div class="lp-r"><span class="a">Route</span><span class="b">'+o.cities_route+'</span></div>'
+        +'<div class="lp-r"><span class="a">Stop</span><span class="b">'+s.name+'</span></div>'
+        +'<div class="lp-r"><span class="a">Cargo</span><span class="b">'+o.cargo+' ('+ct+')</span></div>'
+        +'<div class="lp-r"><span class="a">Weight</span><span class="b">'+o.weight+' t</span></div>'
+        +'<div class="lp-r"><span class="a">Distance</span><span class="b cy">'+o.distance_km+' km</span></div>'
+        +'<div class="lp-r"><span class="a">Duration</span><span class="b cy">'+o.duration_hours+' h</span></div>'
+        +'<div class="lp-r"><span class="a">Transport</span><span class="b pk">'+o.transport_cost.toLocaleString()+' rub</span></div>'
+        +'<div class="lp-r"><span class="a">Sum</span><span class="b pk">'+o.sum.toLocaleString()+' rub</span></div>'
+        +'<div class="lp-r"><span class="a">Status</span><span class="b"><span class="badge b-'+st+'">'+st+'</span></span></div>',
+        {maxWidth:280}
+      );
+    }
+  }
 }
 
 function showInfo(o){
@@ -282,16 +264,17 @@ function showInfo(o){
   if(!el)return;
   el.innerHTML='<div class="info-hdr">'+o.number+'</div>'
     +'<div class="ir"><span class="lb">Agent</span><span class="vl">'+o.counteragent+'</span></div>'
-    +'<div class="ir"><span class="lb">From</span><span class="vl">'+(o.from_city||'Moscow')+'</span></div>'
-    +'<div class="ir"><span class="lb">To</span><span class="vl">'+o.city+'</span></div>'
+    +'<div class="ir"><span class="lb">From</span><span class="vl">'+o.from_city+'</span></div>'
+    +'<div class="ir"><span class="lb">To</span><span class="vl">'+o.to_city+'</span></div>'
     +'<div class="ir"><span class="lb">Cargo</span><span class="vl">'+o.cargo+' ('+ct+')</span></div>'
     +'<div class="ir"><span class="lb">Weight</span><span class="vl">'+o.weight+' t</span></div>'
-    +'<div class="ir"><span class="lb">Distance</span><span class="vl cyan">'+(o.distance_km||'...')+' km</span></div>'
-    +'<div class="ir"><span class="lb">Duration</span><span class="vl cyan">'+(o.duration_hours||'...')+' h</span></div>'
+    +'<div class="ir"><span class="lb">Distance</span><span class="vl cyan">'+o.distance_km+' km</span></div>'
+    +'<div class="ir"><span class="lb">Duration</span><span class="vl cyan">'+o.duration_hours+' h</span></div>'
+    +'<div class="ir"><span class="lb">Transport</span><span class="vl pink">'+o.transport_cost.toLocaleString()+' rub</span></div>'
     +'<div class="ir"><span class="lb">Sum</span><span class="vl pink">'+o.sum.toLocaleString()+' rub</span></div>'
     +'<div class="ir"><span class="lb">Status</span><span class="vl"><span class="badge b-'+st+'">'+st+'</span></span></div>'
     +'<div class="ir"><span class="lb">Date</span><span class="vl">'+o.date+'</span></div>'
-    +'<div class="route-box"><b>Route:</b> '+(o.from_city||'Moscow')+' \u2192 '+o.city+'</div>';
+    +'<div class="route-box"><b>Route:</b> '+o.cities_route+'</div>';
 }
 
 function findO(num){for(var i=0;i<orders.length;i++){if(orders[i].number===num)return orders[i];}return null;}
@@ -313,14 +296,14 @@ function addRow(o,prep){
   var tr=document.createElement('tr');
   if(prep)tr.className='row-new';
   tr.setAttribute('data-num',o.number);
-  var cities=o.cities?o.cities.join(' -> '):o.city;
-  var stopsN=o.stops&&o.stops.length>1?' <span style="font-size:6px;color:#565a72">('+o.stops.length+')</span>':'';
+  var routeTag=o.has_route===false?' <span style="color:#fb923c;font-size:6px">[sbor]</span>':'';
   var h='<td style="font-family:JetBrains Mono,monospace;color:#818cf8;font-weight:600;font-size:8px">'+o.number+'</td>';
-  h+='<td style="font-size:8px">'+o.counteragent+'</td>';
-  h+='<td title="'+cities+'" style="font-size:8px">'+o.city+stopsN+'</td>';
+  h+='<td style="font-size:8px">'+o.from_city+'</td>';
+  h+='<td style="font-size:8px">'+o.to_city+routeTag+'</td>';
+  h+='<td style="font-size:7px;color:#565a72" title="'+o.cities_route+'">'+o.cities_route+'</td>';
   h+='<td style="font-size:7px">'+o.cargo+' <span class="ctag '+ct+'">'+o.cargo_type+'</span></td>';
   h+='<td style="text-align:right;font-size:8px">'+o.weight+'</td>';
-  h+='<td class="km">'+(o._dist?o._dist:'...')+'</td>';
+  h+='<td class="km">'+o.distance_km+' km</td>';
   h+='<td class="money">'+o.sum.toLocaleString()+'</td>';
   h+='<td><span class="badge b-'+st+'">'+st+'</span></td>';
   tr.innerHTML=h;
@@ -356,22 +339,10 @@ function refreshAll(){
 
 function addOneOrder(){
   return fetch('/api/random-order').then(function(r){return r.json()}).then(function(o){
-    o._coords=[];o._dist=0;o._dur=0;
     orders.unshift(o);
     addRow(o,true);
     drawRoute(o);
     updateStats();
-    buildRoute(o.stops||[]).then(function(r){
-      o._coords=r.coords;o._dist=r.dist;o._dur=r.dur;
-      routeLayer.clearLayers();markerLayer.clearLayers();cIdx=0;
-      orders.forEach(function(x){if(matchF(x))drawRoute(x);});
-      addWh();
-      var rows=document.getElementById('tB').rows;
-      for(var i=0;i<rows.length;i++){
-        if(rows[i].getAttribute('data-num')===o.number){rows[i].cells[5].textContent=o._dist+' km';break;}
-      }
-      updateStats();
-    }).catch(function(){});
   }).catch(function(e){console.error('addOneOrder error:',e);});
 }
 
