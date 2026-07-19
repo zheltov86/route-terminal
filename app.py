@@ -128,7 +128,7 @@ tr.active td{background:rgba(52,211,153,.1)!important}
     <div class="sep"></div>
     <button class="btn dng" id="bClear">Clear</button>
     <div class="sep"></div>
-    <div style="position:relative">
+    <div style="position:relative;display:flex;align-items:center">
       <button class="btn" id="bApi" style="border-color:#fbbf24;color:#fbbf24">API</button>
       <div id="apiMenu" style="display:none;position:absolute;right:0;top:100%;margin-top:4px;background:#13141e;border:1px solid #1e2035;border-radius:6px;padding:6px 0;min-width:220px;z-index:100;box-shadow:0 8px 24px rgba(0,0,0,.6)">
         <a href="http://localhost:5001/" target="_blank" style="display:block;padding:6px 12px;font-size:10px;color:#8b8fa8;text-decoration:none">1C API - Home</a>
