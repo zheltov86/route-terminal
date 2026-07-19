@@ -44,111 +44,100 @@ def api_orders():
 
 @app.route("/api/export/xml")
 def api_export_xml():
-    """Выгрузка заказов в формате EnterpriseData 1.8"""
+    """Выгрузка заказов в EnterpriseData 1.8 XML (для XDTO-парсинга в 1C).
+    Формат строго как Тест.xml / Выгрузка_Заказы.xml."""
     from flask import Response as Resp
     import uuid
 
     now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
-
     org_ref = "553d56f1-8295-11f1-8af8-04ecd881cf53"
-    org_name = "Управленческая организация"
     cur_ref = "7e3e0ef4-8295-11f1-8af8-04ecd881cf53"
-    cur_name = "руб."
 
-    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
-    xml += '<Message xmlns:msg="http://www.1c.ru/SSL/Exchange/Message" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n'
-    xml += '\t<msg:Header>\n'
-    xml += '\t\t<msg:Format>http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.8</msg:Format>\n'
-    xml += f'\t\t<msg:CreationDate>{now}</msg:CreationDate>\n'
-    xml += '\t\t<msg:AvailableVersion>1.8</msg:AvailableVersion>\n'
-    xml += '\t</msg:Header>\n'
-    xml += '\t<Body xmlns="http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.8">\n'
+    def indent(l): return "\t" * l
+    def ref(): return str(uuid.uuid4())
+    def esc(s): return str(s).replace("&","&amp;").replace("<","&lt;").replace(">","&gt;")
 
-    # Справочники
-    xml += '\t\t<Справочник.Валюты>\n'
-    xml += '\t\t\t<КлючевыеСвойства>\n'
-    xml += f'\t\t\t\t<Ссылка>{cur_ref}</Ссылка>\n'
-    xml += '\t\t\t\t<ДанныеКлассификатора>\n'
-    xml += '\t\t\t\t\t<Код>643</Код>\n'
-    xml += '\t\t\t\t\t<Наименование>руб.</Наименование>\n'
-    xml += '\t\t\t\t</ДанныеКлассификатора>\n'
-    xml += '\t\t\t</КлючевыеСвойства>\n'
-    xml += '\t\t</Справочник.Валюты>\n'
+    L = []
+    L.append('<?xml version="1.0" encoding="UTF-8"?>')
+    L.append('<Message xmlns:msg="http://www.1c.ru/SSL/Exchange/Message" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">')
+    L.append(f'{indent(1)}<msg:Header>')
+    L.append(f'{indent(2)}<msg:Format>http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.8</msg:Format>')
+    L.append(f'{indent(2)}<msg:CreationDate>{now}</msg:CreationDate>')
+    L.append(f'{indent(2)}<msg:AvailableVersion>1.8</msg:AvailableVersion>')
+    L.append(f'{indent(1)}</msg:Header>')
+    L.append(f'{indent(1)}<Body xmlns="http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.8">')
 
-    xml += '\t\t<Справочник.Организации>\n'
-    xml += '\t\t\t<КлючевыеСвойства>\n'
-    xml += f'\t\t\t\t<Ссылка>{org_ref}</Ссылка>\n'
-    xml += f'\t\t\t\t<Наименование>{org_name}</Наименование>\n'
-    xml += '\t\t\t\t<ЮридическоеФизическоеЛицо>ЮридическоеЛицо</ЮридическоеФизическоеЛицо>\n'
-    xml += '\t\t\t</КлючевыеСвойства>\n'
-    xml += '\t\t</Справочник.Организации>\n'
+    # Валюта
+    L.append(f'{indent(2)}<Справочник.Валюты>')
+    L.append(f'{indent(3)}<КлючевыеСвойства>')
+    L.append(f'{indent(4)}<Ссылка>{cur_ref}</Ссылка>')
+    L.append(f'{indent(4)}<ДанныеКлассификатора><Код>643</Код><Наименование>руб.</Наименование></ДанныеКлассификатора>')
+    L.append(f'{indent(3)}</КлючевыеСвойства>')
+    L.append(f'{indent(3)}<ПараметрыПрописи>рубль, рубля, рублей, м, копейка, копейки, копеек, ж, 2 знака</ПараметрыПрописи>')
+    L.append(f'{indent(2)}</Справочник.Валюты>')
 
-    # Заказы
+    # Организация
+    L.append(f'{indent(2)}<Справочник.Организации>')
+    L.append(f'{indent(3)}<КлючевыеСвойства>')
+    L.append(f'{indent(4)}<Ссылка>{org_ref}</Ссылка>')
+    L.append(f'{indent(4)}<Наименование>Управленческая организация</Наименование>')
+    L.append(f'{indent(4)}<ЮридическоеФизическоеЛицо>ЮридическоеЛицо</ЮридическоеФизическоеЛицо>')
+    L.append(f'{indent(3)}</КлючевыеСвойства>')
+    L.append(f'{indent(3)}<Префикс>УУ</Префикс>')
+    L.append(f'{indent(2)}</Справочник.Организации>')
+
+    # Заказы клиентов
     for order in load_orders():
-        order_ref = str(uuid.uuid4())
-        client_ref = str(uuid.uuid4())
+        order_ref = ref()
+        kont_ref = ref()
         num = order.get("number", "")
         date = order.get("date", "")
-        amount = order.get("amount", 0)
-        comment = order.get("comment", "")
-        items = order.get("items", [])
+        amount = order.get("amount", order.get("sum", 0))
+        comment = order.get("comment", f"Заказ {num}")
 
-        xml += '\t\t<Документ.ЗаказКлиента>\n'
-        xml += '\t\t\t<КлючевыеСвойства>\n'
-        xml += f'\t\t\t\t<Ссылка>{order_ref}</Ссылка>\n'
-        xml += f'\t\t\t\t<Номер>{num}</Номер>\n'
-        xml += f'\t\t\t\t<Дата>{date}T00:00:00</Дата>\n'
-        xml += '\t\t\t\t<Проведен>true</Проведен>\n'
-        xml += '\t\t\t</КлючевыеСвойства>\n'
-        xml += '\t\t\t<Организация>\n'
-        xml += f'\t\t\t\t<Ссылка>{org_ref}</Ссылка>\n'
-        xml += f'\t\t\t\t<Наименование>{org_name}</Наименование>\n'
-        xml += '\t\t\t</Организация>\n'
-        xml += '\t\t\t<Контрагент>\n'
-        xml += f'\t\t\t\t<Ссылка>{client_ref}</Ссылка>\n'
-        xml += f'\t\t\t\t<Наименование>{order.get("client_name","Клиент")}</Наименование>\n'
-        xml += '\t\t\t</Контрагент>\n'
-        xml += '\t\t\t<Валюта>\n'
-        xml += f'\t\t\t\t<Ссылка>{cur_ref}</Ссылка>\n'
-        xml += f'\t\t\t\t<Наименование>{cur_name}</Наименование>\n'
-        xml += '\t\t\t</Валюта>\n'
-        xml += f'\t\t\t<Сумма>{amount}</Сумма>\n'
-        xml += f'\t\t\t<Комментарий>{comment}</Комментарий>\n'
-        xml += '\t\t\t<Товары>\n'
+        L.append(f'{indent(2)}<Документ.ЗаказКлиента>')
+        L.append(f'{indent(3)}<КлючевыеСвойства>')
+        L.append(f'{indent(4)}<Ссылка>{order_ref}</Ссылка>')
+        L.append(f'{indent(4)}<Номер>{esc(num)}</Номер>')
+        L.append(f'{indent(4)}<Дата>{date}T00:00:00</Дата>')
+        L.append(f'{indent(4)}<Проведен>true</Проведен>')
+        L.append(f'{indent(3)}</КлючевыеСвойства>')
+        L.append(f'{indent(3)}<Организация><Ссылка>{org_ref}</Ссылка><Наименование>Управленческая организация</Наименование></Организация>')
+        L.append(f'{indent(3)}<Контрагент><Ссылка>{kont_ref}</Ссылка><Наименование>{esc(order.get("counteragent","Клиент"))}</Наименование><НаименованиеПолное>{esc(order.get("counteragent","Клиент"))}</НаименованиеПолное><ЮридическоеФизическоеЛицо>ЮридическоеЛицо</ЮридическоеФизическоеЛицо></Контрагент>')
+        L.append(f'{indent(3)}<Валюта><Ссылка>{cur_ref}</Ссылка><Наименование>руб.</Наименование></Валюта>')
+        L.append(f'{indent(3)}<Сумма>{amount}</Сумма>')
+        L.append(f'{indent(3)}<Комментарий>{esc(comment)}</Комментарий>')
+        L.append(f'{indent(3)}<Товары>')
 
-        for item in items:
-            item_ref = str(uuid.uuid4())
-            unit_ref = str(uuid.uuid4())
-            qty = item.get("quantity", 0)
+        for item in order.get("items", []):
+            item_ref = ref()
+            unit_ref = ref()
+            qty = item.get("quantity", item.get("qty", 0))
             price = item.get("price", 0)
             sum_val = item.get("sum", 0)
             vat_rate = item.get("vat_rate", "НДС20")
             vat_sum = round(sum_val * 0.2, 2) if vat_rate == "НДС20" else 0
+            nomenclature = item.get("nomenclature_name", item.get("item", ""))
+            unit_name = item.get("unit_name", item.get("unit", "шт"))
 
-            xml += '\t\t\t\t<Строка>\n'
-            xml += f'\t\t\t\t\t<НомерСтрокиДокумента>{item.get("line","")}</НомерСтрокиДокумента>\n'
-            xml += '\t\t\t\t\t<ДанныеНоменклатуры>\n'
-            xml += f'\t\t\t\t\t\t<Ссылка>{item_ref}</Ссылка>\n'
-            xml += f'\t\t\t\t\t\t<Наименование>{item.get("nomenclature_name","")}</Наименование>\n'
-            xml += '\t\t\t\t\t</ДанныеНоменклатуры>\n'
-            xml += '\t\t\t\t\t<ЕдиницаИзмерения>\n'
-            xml += f'\t\t\t\t\t\t<Ссылка>{unit_ref}</Ссылка>\n'
-            xml += f'\t\t\t\t\t\t<Наименование>{item.get("unit_name","шт")}</Наименование>\n'
-            xml += '\t\t\t\t\t</ЕдиницаИзмерения>\n'
-            xml += f'\t\t\t\t\t<Количество>{qty}</Количество>\n'
-            xml += f'\t\t\t\t\t<Цена>{price}</Цена>\n'
-            xml += f'\t\t\t\t\t<Сумма>{sum_val}</Сумма>\n'
-            xml += f'\t\t\t\t\t<СтавкаНДС>{vat_rate}</СтавкаНДС>\n'
-            xml += f'\t\t\t\t\t<СуммаНДС>{vat_sum}</СуммаНДС>\n'
-            xml += '\t\t\t\t</Строка>\n'
+            L.append(f'{indent(4)}<Строка>')
+            L.append(f'{indent(5)}<НомерСтрокиДокумента>{item.get("line", "")}</НомерСтрокиДокумента>')
+            L.append(f'{indent(5)}<ДанныеНоменклатуры><Ссылка>{item_ref}</Ссылка><Наименование>{esc(nomenclature)}</Наименование></ДанныеНоменклатуры>')
+            L.append(f'{indent(5)}<ЕдиницаИзмерения><Ссылка>{unit_ref}</Ссылка><Наименование>{esc(unit_name)}</Наименование></ЕдиницаИзмерения>')
+            L.append(f'{indent(5)}<Количество>{qty}</Количество>')
+            L.append(f'{indent(5)}<Цена>{price}</Цена>')
+            L.append(f'{indent(5)}<Сумма>{sum_val}</Сумма>')
+            L.append(f'{indent(5)}<СтавкаНДС>{vat_rate}</СтавкаНДС>')
+            L.append(f'{indent(5)}<СуммаНДС>{vat_sum}</СуммаНДС>')
+            L.append(f'{indent(4)}</Строка>')
 
-        xml += '\t\t\t</Товары>\n'
-        xml += '\t\t</Документ.ЗаказКлиента>\n'
+        L.append(f'{indent(3)}</Товары>')
+        L.append(f'{indent(2)}</Документ.ЗаказКлиента>')
 
-    xml += '\t</Body>\n'
-    xml += '</Message>'
+    L.append(f'{indent(1)}</Body>')
+    L.append('</Message>')
 
-    return Resp(xml, mimetype="text/xml; charset=utf-8")
+    return Resp("\n".join(L), mimetype="text/xml; charset=utf-8")
 
 HTML = r"""<!DOCTYPE html>
 <html lang="ru">
