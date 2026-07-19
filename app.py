@@ -42,6 +42,15 @@ def api_budget_optimize():
 def api_orders():
     return jsonify(load_orders())
 
+@app.route("/api/order/<number>")
+def api_order(number):
+    """Получение заказа по номеру"""
+    orders = load_orders()
+    for o in orders:
+        if o.get("number") == number:
+            return jsonify(o)
+    return jsonify({"error": "not found", "message": f"Order {number} not found"}), 404
+
 @app.route("/api/export/organization")
 def api_export_organization():
     """Выгрузка организации в формате EnterpriseData 1.8 (XSD-схема)"""
