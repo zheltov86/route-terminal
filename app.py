@@ -42,7 +42,7 @@ body{font-family:'Inter',system-ui,sans-serif;background:#0a0b0f;color:#e8eaf0}
 .logo{display:flex;align-items:center;gap:6px}
 .logo i{width:22px;height:22px;background:linear-gradient(135deg,#6366f1,#22d3ee);border-radius:5px;display:flex;align-items:center;justify-content:center;font-size:9px;font-weight:800;color:#fff;font-style:normal}
 .logo b{font-size:12px}.logo small{font-size:8px;color:#565a72;text-transform:uppercase}
-.toolbar{display:flex;gap:4px;margin-left:16px}
+.toolbar{display:flex;align-items:center;gap:4px;margin-left:16px}
 .btn{background:#1a1b28;border:1px solid #1e2035;color:#8b8fa8;padding:3px 10px;border-radius:4px;font-size:9px;font-weight:600;cursor:pointer;font-family:inherit}
 .btn:hover{border-color:#6366f1;color:#818cf8}
 .btn.pri{background:linear-gradient(135deg,#6366f1,#818cf8);color:#fff;border-color:transparent}
