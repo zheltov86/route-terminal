@@ -1,31 +1,19 @@
-from flask import Flask, jsonify, Response
-import json, os, random
-from datetime import datetime
+﻿from flask import Flask, jsonify, Response
+import json, os
+from logic import генерация_заказа, генерация_заказов
 
 app = Flask(__name__)
-DATA_FILE = os.path.join(os.path.dirname(__file__), "orders.json")
-
-def load_orders():
-    if os.path.exists(DATA_FILE):
-        with open(DATA_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return []
 
 @app.route("/")
 def index(): return Response(HTML, mimetype="text/html")
 
-@app.route("/api/orders")
-def api_orders(): return jsonify(load_orders())
-
 @app.route("/api/random-order")
 def api_random_order():
-    orders = load_orders()
-    if not orders: return jsonify({"error": "empty"}), 404
-    o = dict(random.choice(orders))
-    o["number"] = "ZK-" + str(random.randint(10000, 99999)) + "-26"
-    o["date"] = datetime.now().strftime("%Y-%m-%d")
-    o["status"] = random.choice(["New", "Processing", "Confirmed", "InTransit", "Delivered"])
-    return jsonify(o)
+    return jsonify(генерация_заказа())
+
+@app.route("/api/orders")
+def api_orders():
+    return jsonify(load_orders())
 
 HTML = r"""<!DOCTYPE html>
 <html lang="ru">
@@ -245,10 +233,15 @@ function matchF(o){
 function drawRoute(o){
   var color=CC[cIdx%CC.length];cIdx++;
   o._color=color;
-  if(o._coords&&o._coords.length>=2){
-    var ln=L.polyline(o._coords,{color:color,weight:2.5,opacity:0.9}).addTo(routeLayer);
+  var ct=o.cargo_type==='сборный'?'Sbor':'Fura';
+  var st=o.status||'New';
+  var num=o.number;
+
+  // Маршрут: фура — линия от склада до назначения
+  if(o.has_route!==false){
+    var coords=[[WH[0],WH[1]],[o.lat,o.lon]];
+    var ln=L.polyline(coords,{color:color,weight:2.5,opacity:0.9}).addTo(routeLayer);
     ln._n=o.number;
-    var num=o.number;
     ln.on('mouseover',function(){
       ln.setStyle({weight:4,opacity:1});ln.bringToFront();
       highlightRow(num,true);
@@ -260,33 +253,31 @@ function drawRoute(o){
       if(selectedNum===null){var el=document.getElementById('iBox');if(el)el.innerHTML='<div class="info-empty">Hover on route or click row</div>';}
     });
   }
-  if(o.stops){
-    o.stops.forEach(function(s,i){
-      var last=i===o.stops.length-1;
-      var ct=o.cargo_type==='sborniy'?'Sbor':'Fura';
-      var st=o.status||'New';
-      var routeStr=o.stops.map(function(x){return x.name}).join(' &rarr; ');
-      var popupHtml='<div class="lp-t">'+o.number+'</div>'
-        +'<div class="lp-r"><span class="a">Agent</span><span class="b">'+o.counteragent+'</span></div>'
-        +'<div class="lp-r"><span class="a">City</span><span class="b">'+s.name+'</span></div>'
-        +'<div class="lp-r"><span class="a">Cargo</span><span class="b">'+o.cargo+' ('+ct+')</span></div>'
-        +'<div class="lp-r"><span class="a">Weight</span><span class="b">'+o.weight+' t</span></div>'
-        +'<div class="lp-r"><span class="a">Distance</span><span class="b cy">'+(o._dist||'...')+' km</span></div>'
-        +'<div class="lp-r"><span class="a">Duration</span><span class="b cy">'+(o._dur||'...')+' h</span></div>'
-        +'<div class="lp-r"><span class="a">Sum</span><span class="b pk">'+o.sum.toLocaleString()+' rub</span></div>'
-        +'<div class="lp-r"><span class="a">Status</span><span class="b"><span class="badge b-'+st+'">'+st+'</span></span></div>'
-        +'<div class="lp-r"><span class="a">Date</span><span class="b">'+o.date+'</span></div>'
-        +'<div class="lp-c"><b>Route:</b> Moscow &rarr; '+routeStr+'</div>';
-      var mk=L.marker([s.lat,s.lon],{icon:L.divIcon({html:'<div style="width:'+(last?9:6)+'px;height:'+(last?9:6)+'px;background:'+(last?color:'#fff')+';border-radius:50%;border:2px solid rgba(255,255,255,'+(last?1:0.5)+');box-shadow:0 0 6px '+color+'80"></div>',className:'',iconSize:[last?9:6,last?9:6],iconAnchor:[last?5:3,last?5:3]})}).addTo(markerLayer);
-      mk._n=o.number;
-      mk.bindPopup(popupHtml,{maxWidth:280,className:'dark-popup'});
-    });
-  }
+
+  // Маркер назначения
+  var popupHtml='<div class="lp-t">'+o.number+(o.has_route===false?' <span style="color:#fb923c;font-size:9px">[sbor]</span>':'')+'</div>'
+    +'<div class="lp-r"><span class="a">Agent</span><span class="b">'+o.counteragent+'</span></div>'
+    +'<div class="lp-r"><span class="a">From</span><span class="b">'+(o.from_city||'Moscow')+'</span></div>'
+    +'<div class="lp-r"><span class="a">To</span><span class="b">'+o.city+'</span></div>'
+    +'<div class="lp-r"><span class="a">Cargo</span><span class="b">'+o.cargo+' ('+ct+')</span></div>'
+    +'<div class="lp-r"><span class="a">Weight</span><span class="b">'+o.weight+' t</span></div>'
+    +'<div class="lp-r"><span class="a">Distance</span><span class="b cy">'+(o.distance_km||'...')+' km</span></div>'
+    +'<div class="lp-r"><span class="a">Duration</span><span class="b cy">'+(o.duration_hours||'...')+' h</span></div>'
+    +'<div class="lp-r"><span class="a">Transport</span><span class="b pk">'+(o.transport_cost||0).toLocaleString()+' rub</span></div>'
+    +'<div class="lp-r"><span class="a">Sum</span><span class="b pk">'+o.sum.toLocaleString()+' rub</span></div>'
+    +'<div class="lp-r"><span class="a">Status</span><span class="b"><span class="badge b-'+st+'">'+st+'</span></span></div>'
+    +'<div class="lp-r"><span class="a">Date</span><span class="b">'+o.date+'</span></div>';
+
+  var markerSize=o.has_route===false?12:9;
+  var markerColor=o.has_route===false?'#fb923c':color;
+  var mk=L.marker([o.lat,o.lon],{icon:L.divIcon({html:'<div style="width:'+markerSize+'px;height:'+markerSize+'px;background:'+markerColor+';border-radius:50%;border:2px solid rgba(255,255,255,0.8);box-shadow:0 0 8px '+markerColor+'80"></div>',className:'',iconSize:[markerSize,markerSize],iconAnchor:[Math.ceil(markerSize/2),Math.ceil(markerSize/2)]})}).addTo(markerLayer);
+  mk._n=o.number;
+  mk.bindPopup(popupHtml,{maxWidth:280,className:'dark-popup'});
 }
 
 function showInfo(o){
   var st=o.status||'New';
-  var ct=o.cargo_type==='sborniy'?'Sbor':'Fura';
+  var ct=o.cargo_type===''сборный''?'Sbor':'Fura';
   var el=document.getElementById('iBox');
   if(!el)return;
   el.innerHTML='<div class="info-hdr">'+o.number+'</div>'
@@ -294,12 +285,12 @@ function showInfo(o){
     +'<div class="ir"><span class="lb">City</span><span class="vl">'+o.city+'</span></div>'
     +'<div class="ir"><span class="lb">Cargo</span><span class="vl">'+o.cargo+' ('+ct+')</span></div>'
     +'<div class="ir"><span class="lb">Weight</span><span class="vl">'+o.weight+' t</span></div>'
-    +'<div class="ir"><span class="lb">Distance</span><span class="vl cyan">'+(o._dist||'...')+' km</span></div>'
-    +'<div class="ir"><span class="lb">Duration</span><span class="vl cyan">'+(o._dur||'...')+' h</span></div>'
+    +'<div class="ir"><span class="lb">Distance</span><span class="vl cyan">'+(o.distance_km||'...')+' km</span></div>'
+    +'<div class="ir"><span class="lb">Duration</span><span class="vl cyan">'+(o.duration_hours||'...')+' h</span></div>'
     +'<div class="ir"><span class="lb">Sum</span><span class="vl pink">'+o.sum.toLocaleString()+' rub</span></div>'
     +'<div class="ir"><span class="lb">Status</span><span class="vl"><span class="badge b-'+st+'">'+st+'</span></span></div>'
     +'<div class="ir"><span class="lb">Date</span><span class="vl">'+o.date+'</span></div>'
-    +'<div class="route-box"><b>Route:</b> Moscow &rarr; '+(o.stops?o.stops.map(function(x){return x.name}).join(' &rarr; '):o.city)+'</div>';
+    +'<div class="route-box"><b>Route:</b> (o.from_city||'Moscow')+' → '+o.city+'</div>';
 }
 
 function findO(num){for(var i=0;i<orders.length;i++){if(orders[i].number===num)return orders[i];}return null;}
