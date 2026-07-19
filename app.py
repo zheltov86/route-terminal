@@ -25,6 +25,9 @@ def api_random_order():
     o["number"] = "ZK-" + str(random.randint(10000, 99999)) + "-26"
     o["date"] = datetime.now().strftime("%Y-%m-%d")
     o["status"] = random.choice(["New", "Processing", "Confirmed", "InTransit", "Delivered"])
+    o["client"] = random.choice(["OOO TechnoProm","ZAO StroiMash","OOO AlphaStroy","PAO PromSvyaz","OOO MegaFood","AO TransLogistik","OOO InfoService","OOO PromTechnika","ZAO EnergoSnab","OOO Vostok-Trade"])
+    o["delivery"] = random.choice(["Auto","Rail","Air","Sea"])
+    o["notes"] = random.choice(["Standard delivery","Express required","Fragile goods","Perishable","Bulk order"])
     return jsonify(o)
 
 HTML = r"""<!DOCTYPE html>
@@ -63,6 +66,8 @@ td{padding:3px 6px;border-bottom:1px solid rgba(30,32,53,.3);white-space:nowrap;
 tr{transition:background .15s}
 tr.hl td{background:rgba(99,102,241,.15)!important}
 tr.active td{background:rgba(52,211,153,.1)!important}
+tr.shortest td{background:rgba(251,191,36,.08)!important}
+tr.shortest td:first-child::before{content:'\2B50 ';font-size:8px}
 .badge{display:inline-block;padding:0 4px;border-radius:3px;font-size:7px;font-weight:600}
 .b-New{background:rgba(129,140,248,.1);color:#818cf8;border:1px solid rgba(129,140,248,.15)}
 .b-Processing{background:rgba(251,191,36,.1);color:#fbbf24;border:1px solid rgba(251,191,36,.15)}
@@ -87,15 +92,17 @@ tr.active td{background:rgba(52,211,153,.1)!important}
 .ir .vl{color:#e8eaf0;font-weight:500;font-family:'JetBrains Mono',monospace;font-size:9px;text-align:right;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .ir .vl.pink{color:#f472b6}
 .ir .vl.cyan{color:#22d3ee}
+.ir .vl.gold{color:#fbbf24}
 .route-box{margin-top:6px;padding:5px;background:#13141e;border:1px solid #1e2035;border-radius:4px;font-size:8px;color:#565a72;line-height:1.6}
 .route-box b{color:#22d3ee}
+.shortest-badge{display:inline-block;padding:1px 4px;border-radius:3px;font-size:7px;font-weight:700;background:rgba(251,191,36,.15);color:#fbbf24;border:1px solid rgba(251,191,36,.3);margin-left:4px}
 .leaflet-popup-content-wrapper{background:#13141e!important;border:1px solid #1e2035!important;border-radius:8px!important;color:#e8eaf0!important;box-shadow:0 8px 32px rgba(0,0,0,.6)!important;min-width:220px}
 .leaflet-popup-tip{background:#13141e!important}
 .leaflet-popup-content{font-family:'Inter',sans-serif;font-size:10px;line-height:1.5;margin:8px 10px}
 .lp-t{font-weight:700;color:#818cf8;margin-bottom:4px;font-size:12px}
 .lp-r{display:flex;justify-content:space-between;padding:2px 0;font-size:9px}
 .lp-r .a{color:#565a72}.lp-r .b{color:#e8eaf0;font-weight:500;font-family:'JetBrains Mono',monospace}
-.lp-r .b.pk{color:#f472b6}.lp-r .b.cy{color:#22d3ee}
+.lp-r .b.pk{color:#f472b6}.lp-r .b.cy{color:#22d3ee}.lp-r .b.gd{color:#fbbf24}
 @keyframes fadeIn{from{opacity:0;transform:translateY(-3px)}to{opacity:1;transform:translateY(0)}}
 .row-new{animation:fadeIn .3s ease-out}
 </style>
@@ -135,7 +142,7 @@ tr.active td{background:rgba(52,211,153,.1)!important}
 <script>
 var WH=[55.7558,37.6173];
 var CC=['#f472b6','#fb923c','#34d399','#22d3ee','#a78bfa','#fbbf24','#f87171','#818cf8','#c084fc','#2dd4bf','#e879f9','#f59e0b','#ef4444','#8b5cf6','#06b6d4'];
-var orders=[],autoI=null,cIdx=0,selectedNum=null;
+var orders=[],autoI=null,cIdx=0,selectedNum=null,shortestNum=null;
 
 var map=L.map('map',{zoomControl:false,attributionControl:false}).setView([57,42],5);
 L.control.zoom({position:'bottomright'}).addTo(map);
@@ -166,6 +173,15 @@ function buildRoute(stops){
   return next();
 }
 
+function findShortest(){
+  var min=Infinity,sn=null;
+  orders.forEach(function(o){if(o._dist&&o._dist>0&&o._dist<min){min=o._dist;sn=o.number;}});
+  shortestNum=sn;
+  document.querySelectorAll('#tB tr').forEach(function(tr){
+    tr.classList.toggle('shortest',tr.getAttribute('data-num')===sn);
+  });
+}
+
 function updateStats(){
   var n=orders.length,dl=0,km=0;
   orders.forEach(function(o){if(o.status==='Delivered')dl++;km+=o._dist||0;});
@@ -175,6 +191,7 @@ function updateStats(){
 }
 
 function highlightRoute(num,on){
+  if(num===shortestNum&&on)return;
   routeLayer.eachLayer(function(l){if(l._n===num){l.setStyle({weight:on?5:2.5,opacity:on?1:0.85});if(on)l.bringToFront();}});
   markerLayer.eachLayer(function(l){if(l._n===num&&on)l.bringToFront();});
 }
@@ -192,42 +209,68 @@ function highlightRow(num,on){
 
 function showInfo(o){
   var st=o.status||'New';
+  var isShort=o.number===shortestNum;
   var el=document.getElementById('iBox');if(!el)return;
-  el.innerHTML='<div class="info-hdr">'+o.number+'</div>'
-    +'<div class="ir"><span class="lb">From</span><span class="vl">'+(o.from_city||'...')+'</span></div>'
+  el.innerHTML='<div class="info-hdr">'+o.number+(isShort?'<span class="shortest-badge">SHORTEST</span>':'')+'</div>'
+    +'<div class="ir"><span class="lb">From</span><span class="vl">'+(o.from_city||'Moscow')+'</span></div>'
     +'<div class="ir"><span class="lb">To</span><span class="vl">'+o.city+'</span></div>'
+    +'<div class="ir"><span class="lb">Client</span><span class="vl">'+(o.client||'...')+'</span></div>'
     +'<div class="ir"><span class="lb">Cargo</span><span class="vl">'+o.cargo+'</span></div>'
     +'<div class="ir"><span class="lb">Distance</span><span class="vl cyan">'+(o._dist||'...')+' km</span></div>'
+    +'<div class="ir"><span class="lb">Duration</span><span class="vl cyan">'+(o._dur||'...')+' h</span></div>'
+    +'<div class="ir"><span class="lb">Weight</span><span class="vl">'+o.weight+' t</span></div>'
+    +'<div class="ir"><span class="lb">Sum</span><span class="vl pink">'+o.sum.toLocaleString()+' rub</span></div>'
     +'<div class="ir"><span class="lb">Status</span><span class="vl"><span class="badge b-'+st+'">'+st+'</span></span></div>'
+    +'<div class="ir"><span class="lb">Delivery</span><span class="vl">'+(o.delivery||'...')+'</span></div>'
     +'<div class="ir"><span class="lb">Date</span><span class="vl">'+o.date+'</span></div>'
+    +'<div class="ir"><span class="lb">Notes</span><span class="vl">'+(o.notes||'...')+'</span></div>'
     +'<div class="route-box"><b>Route:</b> '+(o.from_city||'Moscow')+' &rarr; '+o.city+'</div>';
+}
+
+function popupHtml(o,s,ct){
+  var st=o.status||'New';
+  var isShort=o.number===shortestNum;
+  return '<div class="lp-t">'+o.number+(isShort?' <span style="color:#fbbf24">\u2B50</span>':'')+'</div>'
+    +'<div class="lp-r"><span class="a">From</span><span class="b">'+(o.from_city||'Moscow')+'</span></div>'
+    +'<div class="lp-r"><span class="a">To</span><span class="b">'+s.name+'</span></div>'
+    +'<div class="lp-r"><span class="a">Client</span><span class="b">'+(o.client||'...')+'</span></div>'
+    +'<div class="lp-r"><span class="a">Cargo</span><span class="b">'+o.cargo+' ('+ct+')</span></div>'
+    +'<div class="lp-r"><span class="a">Weight</span><span class="b">'+o.weight+' t</span></div>'
+    +'<div class="lp-r"><span class="a">Distance</span><span class="b cy">'+(o._dist||'...')+' km</span></div>'
+    +'<div class="lp-r"><span class="a">Duration</span><span class="b cy">'+(o._dur||'...')+' h</span></div>'
+    +'<div class="lp-r"><span class="a">Sum</span><span class="b pk">'+o.sum.toLocaleString()+' rub</span></div>'
+    +'<div class="lp-r"><span class="a">Status</span><span class="b"><span class="badge b-'+st+'">'+st+'</span></span></div>'
+    +'<div class="lp-r"><span class="a">Delivery</span><span class="b">'+(o.delivery||'...')+'</span></div>'
+    +'<div class="lp-r"><span class="a">Date</span><span class="b">'+o.date+'</span></div>'
+    +'<div class="lp-r"><span class="a">Notes</span><span class="b">'+(o.notes||'...')+'</span></div>';
 }
 
 function drawRoute(o){
   var color=CC[cIdx%CC.length];cIdx++;
   o._color=color;
+  var isShort=o.number===shortestNum;
   if(o._coords&&o._coords.length>=2){
-    var ln=L.polyline(o._coords,{color:color,weight:2.5,opacity:0.85}).addTo(routeLayer);
+    var style={color:isShort?'#fbbf24':color,weight:isShort?4:2.5,opacity:isShort?1:0.85};
+    if(isShort){style.dashArray=null;}
+    var ln=L.polyline(o._coords,style).addTo(routeLayer);
     ln._n=o.number;
+    ln.bringToFront();
     var num=o.number;
-    ln.on('mouseover',function(){highlightRoute(num,true);highlightRow(num,true);showInfo(findO(num));});
-    ln.on('mouseout',function(){highlightRoute(num,false);highlightRow(num,false);});
+    if(!isShort){
+      ln.on('mouseover',function(){highlightRoute(num,true);highlightRow(num,true);showInfo(findO(num));});
+      ln.on('mouseout',function(){highlightRoute(num,false);highlightRow(num,false);});
+    }else{
+      ln.on('mouseover',function(){showInfo(findO(num));});
+    }
   }
   if(o.stops){
     o.stops.forEach(function(s,i){
       var last=i===o.stops.length-1;
-      var mk=L.marker([s.lat,s.lon],{icon:L.divIcon({html:'<div style="width:'+(last?9:6)+'px;height:'+(last?9:6)+'px;background:'+(last?color:'#fff')+';border-radius:50%;border:2px solid rgba(255,255,255,'+(last?1:0.5)+');box-shadow:0 0 6px '+color+'80"></div>',className:'',iconSize:[last?9:6,last?9:6],iconAnchor:[last?5:3,last?5:3]})}).addTo(markerLayer);
+      var mc=isShort?'#fbbf24':(last?color:'#fff');
+      var mk=L.marker([s.lat,s.lon],{icon:L.divIcon({html:'<div style="width:'+(last?9:6)+'px;height:'+(last?9:6)+'px;background:'+mc+';border-radius:50%;border:2px solid rgba(255,255,255,'+(last?1:0.5)+');box-shadow:0 0 6px '+mc+'80"></div>',className:'',iconSize:[last?9:6,last?9:6],iconAnchor:[last?5:3,last?5:3]})}).addTo(markerLayer);
       mk._n=o.number;
       var ct=o.cargo_type==='sborniy'?'Sbor':'Fura';
-      var st=o.status||'New';
-      mk.bindPopup('<div class="lp-t">'+o.number+'</div>'
-        +'<div class="lp-r"><span class="a">From</span><span class="b">'+(o.from_city||'Moscow')+'</span></div>'
-        +'<div class="lp-r"><span class="a">To</span><span class="b">'+s.name+'</span></div>'
-        +'<div class="lp-r"><span class="a">Cargo</span><span class="b">'+o.cargo+' ('+ct+')</span></div>'
-        +'<div class="lp-r"><span class="a">Distance</span><span class="b cy">'+(o._dist||'...')+' km</span></div>'
-        +'<div class="lp-r"><span class="a">Status</span><span class="b"><span class="badge b-'+st+'">'+st+'</span></span></div>'
-        +'<div class="lp-r"><span class="a">Date</span><span class="b">'+o.date+'</span></div>',
-        {maxWidth:280});
+      mk.bindPopup(popupHtml(o,s,ct),{maxWidth:280});
     });
   }
 }
@@ -252,9 +295,7 @@ function addRow(o,prep){
     document.querySelectorAll('#tB tr.active').forEach(function(r){r.classList.remove('active')});
     tr.classList.add('active');
     selectedNum=num;
-    routeLayer.eachLayer(function(l){if(l._n===num){l.setStyle({weight:5,opacity:1});l.bringToFront();
-      map.fitBounds(l.getBounds().pad(0.3));
-    }});
+    routeLayer.eachLayer(function(l){if(l._n===num){l.setStyle({weight:5,opacity:1});l.bringToFront();map.fitBounds(l.getBounds().pad(0.3));}});
     markerLayer.eachLayer(function(l){if(l._n===num){l.bringToFront();try{l.openPopup();}catch(e){}}});
     showInfo(order);
   };
@@ -269,6 +310,7 @@ function refreshAll(){
   orders.forEach(function(o){drawRoute(o);});
   document.getElementById('tB').innerHTML='';
   orders.forEach(function(o){addRow(o,false);});
+  findShortest();
 }
 
 function addOneOrder(){
@@ -287,6 +329,7 @@ function addOneOrder(){
         if(rows[i].getAttribute('data-num')===o.number){rows[i].cells[4].textContent=o._dist+' km';break;}
       }
       updateStats();
+      findShortest();
     }).catch(function(){});
   }).catch(function(e){console.error('addOneOrder error:',e);});
 }
@@ -299,7 +342,7 @@ document.getElementById('bAuto').onclick=function(){
   else{addOneOrder();autoI=setInterval(addOneOrder,10000);b.textContent='Stop';b.classList.add('on');}
 };
 document.getElementById('bClear').onclick=function(){
-  orders=[];cIdx=0;selectedNum=null;
+  orders=[];cIdx=0;selectedNum=null;shortestNum=null;
   routeLayer.clearLayers();markerLayer.clearLayers();
   document.getElementById('tB').innerHTML='';updateStats();
   map.setView([57,42],5);
