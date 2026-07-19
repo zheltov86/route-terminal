@@ -1,0 +1,85 @@
+========================================
+  Agent Log — Route Terminal Project
+  File: C:\Users\azhel\web-project\agent_log.txt
+  Rule: LOG before action, LOG after result
+========================================
+
+[2026-07-19] Session Start
+  Task: Build Route Terminal — logistics dashboard with map + table + filters
+  Project: C:\Users\azhel\web-project\
+
+--- Step 1: Initial Setup ---
+  BEFORE: Found app.py, service.py, geo_service.py, http_api.py
+  Action: Rewrote app.py — Flask server + Leaflet map + orders table
+  RESULT: Flask app on port 5000, simple page with API endpoints
+
+--- Step 2: Map + Table + Trading Style ---
+  BEFORE: app.py was simple card page
+  Action: Full rewrite — dark trading UI, Leaflet dark tiles, stats bar, toolbar
+  RESULT: Map visible, orders table, filter buttons, auto mode
+
+--- Step 3: Fix Map Not Displaying ---
+  BEFORE: #map div had no explicit size in flex layout
+  Action: Changed to position:absolute for #map inside position:relative .map-wrap
+  STILL BROKEN: Leaflet needs DOM ready before init
+
+--- Step 4: Fix DOMContentLoaded ---
+  BEFORE: L.map('map') called before DOM ready
+  Action: Wrapped all JS in DOMContentLoaded, added map.invalidateSize()
+  RESULT: Map now displays correctly
+
+--- Step 5: Fix Buttons Not Working ---
+  BEFORE: onclick="functionName()" in HTML, functions defined in script
+  Action: Replaced with addEventListener('click', ...) in JS
+  RESULT: All buttons functional
+
+--- Step 6: Fix Table Not Filling ---
+  BEFORE: gen_order() called OSRM for routes — 10-30s timeout per order
+  Action: Server returns order instantly (no OSRM), client builds routes async
+  RESULT: Table fills immediately, routes build in background
+
+--- Step 7: orders.json Data File ---
+  BEFORE: Server generated orders on-the-fly with slow OSRM calls
+  Action: Created orders.json (25 pre-generated orders), server reads from file
+  RESULT: Instant response from /api/random-order
+
+--- Step 8: Fix Unicode Encoding in Table ---
+  BEFORE: Python raw string r'''...''' contained \u0444\u0443\u0440\u0430 (фура)
+           — not interpreted as Unicode, broke JS string comparison
+  Action: Rewrote with ASCII-only data (English statuses, cargo types)
+  RESULT: Table rows now display correctly
+
+--- Step 9: Display Mode Button ---
+  BEFORE: No way to toggle between lines and dots on map
+  Action: Added "Mode" button cycling: Lines+Dots / Lines Only / Dots Only
+  RESULT: Lines thin but bright (weight:2, opacity:0.9), dots with glow effect
+
+--- Current State ---
+  Server: Flask on localhost:5000
+  Data: orders.json (25 orders, 30 Russian cities)
+  Features: Map (Leaflet dark), Table, Filters (status/cargo/stops),
+            Auto mode (10s), Display mode toggle, Sort columns
+  Status: OPERATIONAL
+
+--- Files Modified ---
+  app.py — main Flask app with HTML/JS
+  orders.json — pre-generated order data
+  geo_service.py — city data + OSRM routing (used by client async)
+
+--- Step 10: Sync Table+Map, Alt Routes, Hover Highlight ---
+  BEFORE: Table and map disconnected, no alt routes, no hover sync
+  Action: Complete rewrite of JS
+  RESULT: Table and map fully synchronized
+
+--- Step 11: Fix Map Lines + Bottom Layout + Info Panel ---
+  BEFORE: alternatives=true broke OSRM response parsing, map empty, table empty
+  Action: Removed alternatives, simple single-route OSRM.
+    Layout: map on top, table+info panel at bottom (220px).
+    Info panel: shows full order details on hover (agent, city, cargo, weight, km, time, sum, status, route).
+    Hover sync: table row -> map highlight + info panel update.
+    Smooth: addTableRow first -> drawRoute -> buildRoute async -> update km cell + redraw map.
+  RESULT: Lines visible on map, table fills, info panel works on hover
+
+========================================
+  END LOG
+========================================

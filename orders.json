@@ -1,0 +1,679 @@
+[
+  {
+    "number": "ZK-83140-26",
+    "date": "2026-07-14",
+    "counteragent": "PAO Rostelecom",
+    "city": "Pskov",
+    "cities": [
+      "Pskov"
+    ],
+    "lat": 57.80003,
+    "lon": 28.341607,
+    "stops": [
+      {
+        "name": "Pskov",
+        "lat": 57.80003,
+        "lon": 28.341607
+      }
+    ],
+    "cargo": "Office Supplies",
+    "cargo_type": "fura",
+    "weight": 18.7,
+    "sum": 154005.94,
+    "status": "New"
+  },
+  {
+    "number": "ZK-42908-26",
+    "date": "2026-07-10",
+    "counteragent": "OOO TechnoProm",
+    "city": "Orel",
+    "cities": [
+      "Orel"
+    ],
+    "lat": 52.980843,
+    "lon": 36.05117,
+    "stops": [
+      {
+        "name": "Orel",
+        "lat": 52.980843,
+        "lon": 36.05117
+      }
+    ],
+    "cargo": "Textiles + Furniture",
+    "cargo_type": "sborniy",
+    "weight": 7.8,
+    "sum": 896738.22,
+    "status": "Confirmed"
+  },
+  {
+    "number": "ZK-90020-26",
+    "date": "2026-07-08",
+    "counteragent": "OOO Vostok-Trade",
+    "city": "Tula",
+    "cities": [
+      "Tula"
+    ],
+    "lat": 54.205568,
+    "lon": 37.592957,
+    "stops": [
+      {
+        "name": "Tula",
+        "lat": 54.205568,
+        "lon": 37.592957
+      }
+    ],
+    "cargo": "Textiles",
+    "cargo_type": "fura",
+    "weight": 17.0,
+    "sum": 1730908.95,
+    "status": "New"
+  },
+  {
+    "number": "ZK-84053-26",
+    "date": "2026-07-15",
+    "counteragent": "OOO PromTechnika",
+    "city": "Nizhny Novgorod",
+    "cities": [
+      "Tver",
+      "Nizhny Novgorod"
+    ],
+    "lat": 56.272582,
+    "lon": 43.917528,
+    "stops": [
+      {
+        "name": "Tver",
+        "lat": 56.83993,
+        "lon": 35.929282
+      },
+      {
+        "name": "Nizhny Novgorod",
+        "lat": 56.272582,
+        "lon": 43.917528
+      }
+    ],
+    "cargo": "Home Appliances",
+    "cargo_type": "fura",
+    "weight": 16.0,
+    "sum": 1710378.37,
+    "status": "Confirmed"
+  },
+  {
+    "number": "ZK-77950-26",
+    "date": "2026-06-26",
+    "counteragent": "ZAO MetallProm",
+    "city": "Kostroma",
+    "cities": [
+      "Kostroma"
+    ],
+    "lat": 57.738034,
+    "lon": 40.914659,
+    "stops": [
+      {
+        "name": "Kostroma",
+        "lat": 57.738034,
+        "lon": 40.914659
+      }
+    ],
+    "cargo": "Building Materials",
+    "cargo_type": "fura",
+    "weight": 19.8,
+    "sum": 78113.31,
+    "status": "Delivered"
+  },
+  {
+    "number": "ZK-76049-26",
+    "date": "2026-06-21",
+    "counteragent": "ZAO StroiMash",
+    "city": "Lipetsk",
+    "cities": [
+      "Vladimir",
+      "Rostov-on-Don",
+      "Lipetsk"
+    ],
+    "lat": 52.573876,
+    "lon": 39.586294,
+    "stops": [
+      {
+        "name": "Vladimir",
+        "lat": 56.147013,
+        "lon": 40.416683
+      },
+      {
+        "name": "Rostov-on-Don",
+        "lat": 47.242214,
+        "lon": 39.689838
+      },
+      {
+        "name": "Lipetsk",
+        "lat": 52.573876,
+        "lon": 39.586294
+      }
+    ],
+    "cargo": "Food Products + Electronics + Office Supplies",
+    "cargo_type": "sborniy",
+    "weight": 10.4,
+    "sum": 1569358.84,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-35261-26",
+    "date": "2026-07-08",
+    "counteragent": "OOO LogistikPro",
+    "city": "Chelyabinsk",
+    "cities": [
+      "Chelyabinsk"
+    ],
+    "lat": 55.173616,
+    "lon": 61.458423,
+    "stops": [
+      {
+        "name": "Chelyabinsk",
+        "lat": 55.173616,
+        "lon": 61.458423
+      }
+    ],
+    "cargo": "Textiles + Building Materials",
+    "cargo_type": "sborniy",
+    "weight": 11.8,
+    "sum": 971363.01,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-56521-26",
+    "date": "2026-06-20",
+    "counteragent": "ZAO EnergoSnab",
+    "city": "Pskov",
+    "cities": [
+      "Pskov"
+    ],
+    "lat": 57.814842,
+    "lon": 28.373582,
+    "stops": [
+      {
+        "name": "Pskov",
+        "lat": 57.814842,
+        "lon": 28.373582
+      }
+    ],
+    "cargo": "Office Supplies",
+    "cargo_type": "fura",
+    "weight": 19.7,
+    "sum": 909113.65,
+    "status": "Processing"
+  },
+  {
+    "number": "ZK-85501-26",
+    "date": "2026-06-24",
+    "counteragent": "AO TransLogistik",
+    "city": "Voronezh",
+    "cities": [
+      "Yekaterinburg",
+      "Voronezh"
+    ],
+    "lat": 51.66449,
+    "lon": 39.19878,
+    "stops": [
+      {
+        "name": "Yekaterinburg",
+        "lat": 56.815845,
+        "lon": 60.613245
+      },
+      {
+        "name": "Voronezh",
+        "lat": 51.66449,
+        "lon": 39.19878
+      }
+    ],
+    "cargo": "Furniture + Food Products",
+    "cargo_type": "sborniy",
+    "weight": 11.2,
+    "sum": 894936.81,
+    "status": "Processing"
+  },
+  {
+    "number": "ZK-47456-26",
+    "date": "2026-06-30",
+    "counteragent": "OOO Vostok-Trade",
+    "city": "St Petersburg",
+    "cities": [
+      "Saratov",
+      "Pskov",
+      "St Petersburg"
+    ],
+    "lat": 59.916864,
+    "lon": 30.362638,
+    "stops": [
+      {
+        "name": "Saratov",
+        "lat": 51.523685,
+        "lon": 46.037754
+      },
+      {
+        "name": "Pskov",
+        "lat": 57.798196,
+        "lon": 28.331264
+      },
+      {
+        "name": "St Petersburg",
+        "lat": 59.916864,
+        "lon": 30.362638
+      }
+    ],
+    "cargo": "Office Supplies",
+    "cargo_type": "fura",
+    "weight": 11.8,
+    "sum": 634126.8,
+    "status": "Processing"
+  },
+  {
+    "number": "ZK-70695-26",
+    "date": "2026-06-24",
+    "counteragent": "ZAO StroiMash",
+    "city": "Moscow",
+    "cities": [
+      "Kazan",
+      "Ryazan",
+      "Moscow"
+    ],
+    "lat": 55.728369,
+    "lon": 37.646927,
+    "stops": [
+      {
+        "name": "Kazan",
+        "lat": 55.768316,
+        "lon": 49.144194
+      },
+      {
+        "name": "Ryazan",
+        "lat": 54.642476,
+        "lon": 39.694121
+      },
+      {
+        "name": "Moscow",
+        "lat": 55.728369,
+        "lon": 37.646927
+      }
+    ],
+    "cargo": "Food Products + Electronics + Building Materials",
+    "cargo_type": "sborniy",
+    "weight": 8.7,
+    "sum": 433196.8,
+    "status": "Confirmed"
+  },
+  {
+    "number": "ZK-64388-26",
+    "date": "2026-06-28",
+    "counteragent": "OOO TechnoMir",
+    "city": "Kursk",
+    "cities": [
+      "Kursk"
+    ],
+    "lat": 51.705461,
+    "lon": 36.194592,
+    "stops": [
+      {
+        "name": "Kursk",
+        "lat": 51.705461,
+        "lon": 36.194592
+      }
+    ],
+    "cargo": "Home Appliances",
+    "cargo_type": "fura",
+    "weight": 15.2,
+    "sum": 1869561.78,
+    "status": "Delivered"
+  },
+  {
+    "number": "ZK-92300-26",
+    "date": "2026-07-11",
+    "counteragent": "AO TransLogistik",
+    "city": "Tver",
+    "cities": [
+      "Tver"
+    ],
+    "lat": 56.869034,
+    "lon": 35.946627,
+    "stops": [
+      {
+        "name": "Tver",
+        "lat": 56.869034,
+        "lon": 35.946627
+      }
+    ],
+    "cargo": "Textiles",
+    "cargo_type": "fura",
+    "weight": 11.1,
+    "sum": 337980.16,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-75556-26",
+    "date": "2026-07-08",
+    "counteragent": "ZAO StroiMash",
+    "city": "Kursk",
+    "cities": [
+      "Tver",
+      "Kursk"
+    ],
+    "lat": 51.745118,
+    "lon": 36.176779,
+    "stops": [
+      {
+        "name": "Tver",
+        "lat": 56.886628,
+        "lon": 35.929593
+      },
+      {
+        "name": "Kursk",
+        "lat": 51.745118,
+        "lon": 36.176779
+      }
+    ],
+    "cargo": "Home Appliances",
+    "cargo_type": "fura",
+    "weight": 16.6,
+    "sum": 473774.47,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-12263-26",
+    "date": "2026-06-27",
+    "counteragent": "PAO Rostelecom",
+    "city": "Saratov",
+    "cities": [
+      "Kursk",
+      "Saratov"
+    ],
+    "lat": 51.552745,
+    "lon": 46.009041,
+    "stops": [
+      {
+        "name": "Kursk",
+        "lat": 51.733304,
+        "lon": 36.196778
+      },
+      {
+        "name": "Saratov",
+        "lat": 51.552745,
+        "lon": 46.009041
+      }
+    ],
+    "cargo": "Food Products",
+    "cargo_type": "fura",
+    "weight": 19.9,
+    "sum": 1861750.65,
+    "status": "Processing"
+  },
+  {
+    "number": "ZK-45170-26",
+    "date": "2026-06-25",
+    "counteragent": "OOO Vostok-Trade",
+    "city": "Volgograd",
+    "cities": [
+      "Volgograd"
+    ],
+    "lat": 48.736852,
+    "lon": 44.535984,
+    "stops": [
+      {
+        "name": "Volgograd",
+        "lat": 48.736852,
+        "lon": 44.535984
+      }
+    ],
+    "cargo": "Electronics",
+    "cargo_type": "fura",
+    "weight": 15.2,
+    "sum": 698457.65,
+    "status": "New"
+  },
+  {
+    "number": "ZK-53649-26",
+    "date": "2026-07-08",
+    "counteragent": "AO AviaTechService",
+    "city": "Saratov",
+    "cities": [
+      "Kazan",
+      "Lipetsk",
+      "Saratov"
+    ],
+    "lat": 51.518623,
+    "lon": 46.052824,
+    "stops": [
+      {
+        "name": "Kazan",
+        "lat": 55.761118,
+        "lon": 49.15187
+      },
+      {
+        "name": "Lipetsk",
+        "lat": 52.622276,
+        "lon": 39.564525
+      },
+      {
+        "name": "Saratov",
+        "lat": 51.518623,
+        "lon": 46.052824
+      }
+    ],
+    "cargo": "Office Supplies",
+    "cargo_type": "fura",
+    "weight": 17.5,
+    "sum": 63963.88,
+    "status": "Processing"
+  },
+  {
+    "number": "ZK-68729-26",
+    "date": "2026-07-11",
+    "counteragent": "OOO TechnoMir",
+    "city": "Vladimir",
+    "cities": [
+      "Ufa",
+      "Vladimir"
+    ],
+    "lat": 56.157646,
+    "lon": 40.415334,
+    "stops": [
+      {
+        "name": "Ufa",
+        "lat": 54.723327,
+        "lon": 55.966917
+      },
+      {
+        "name": "Vladimir",
+        "lat": 56.157646,
+        "lon": 40.415334
+      }
+    ],
+    "cargo": "Office Supplies",
+    "cargo_type": "fura",
+    "weight": 11.4,
+    "sum": 865861.82,
+    "status": "Processing"
+  },
+  {
+    "number": "ZK-59172-26",
+    "date": "2026-07-07",
+    "counteragent": "AO SeverStal",
+    "city": "Yaroslavl",
+    "cities": [
+      "Lipetsk",
+      "Smolensk",
+      "Yaroslavl"
+    ],
+    "lat": 57.598302,
+    "lon": 39.891053,
+    "stops": [
+      {
+        "name": "Lipetsk",
+        "lat": 52.578957,
+        "lon": 39.549586
+      },
+      {
+        "name": "Smolensk",
+        "lat": 54.77774,
+        "lon": 32.032775
+      },
+      {
+        "name": "Yaroslavl",
+        "lat": 57.598302,
+        "lon": 39.891053
+      }
+    ],
+    "cargo": "Office Supplies",
+    "cargo_type": "fura",
+    "weight": 19.2,
+    "sum": 1360056.15,
+    "status": "Delivered"
+  },
+  {
+    "number": "ZK-33506-26",
+    "date": "2026-07-07",
+    "counteragent": "OOO TechnoMir",
+    "city": "Rostov-on-Don",
+    "cities": [
+      "Rostov-on-Don"
+    ],
+    "lat": 47.227872,
+    "lon": 39.687781,
+    "stops": [
+      {
+        "name": "Rostov-on-Don",
+        "lat": 47.227872,
+        "lon": 39.687781
+      }
+    ],
+    "cargo": "Food Products + Textiles",
+    "cargo_type": "sborniy",
+    "weight": 4.7,
+    "sum": 425513.14,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-94077-26",
+    "date": "2026-07-16",
+    "counteragent": "AO AviaTechService",
+    "city": "St Petersburg",
+    "cities": [
+      "St Petersburg"
+    ],
+    "lat": 59.963044,
+    "lon": 30.321441,
+    "stops": [
+      {
+        "name": "St Petersburg",
+        "lat": 59.963044,
+        "lon": 30.321441
+      }
+    ],
+    "cargo": "Furniture",
+    "cargo_type": "fura",
+    "weight": 13.7,
+    "sum": 1356841.75,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-35368-26",
+    "date": "2026-07-19",
+    "counteragent": "AO AviaTechService",
+    "city": "Orel",
+    "cities": [
+      "Bryansk",
+      "Orel"
+    ],
+    "lat": 52.964196,
+    "lon": 36.073778,
+    "stops": [
+      {
+        "name": "Bryansk",
+        "lat": 53.258071,
+        "lon": 34.352323
+      },
+      {
+        "name": "Orel",
+        "lat": 52.964196,
+        "lon": 36.073778
+      }
+    ],
+    "cargo": "Food Products",
+    "cargo_type": "fura",
+    "weight": 18.4,
+    "sum": 1448871.5,
+    "status": "Confirmed"
+  },
+  {
+    "number": "ZK-74820-26",
+    "date": "2026-07-19",
+    "counteragent": "OOO Vostok-Trade",
+    "city": "Tver",
+    "cities": [
+      "Tver"
+    ],
+    "lat": 56.853238,
+    "lon": 35.899258,
+    "stops": [
+      {
+        "name": "Tver",
+        "lat": 56.853238,
+        "lon": 35.899258
+      }
+    ],
+    "cargo": "Home Appliances + Electronics + Office Supplies",
+    "cargo_type": "sborniy",
+    "weight": 11.0,
+    "sum": 424586.54,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-35470-26",
+    "date": "2026-07-19",
+    "counteragent": "OOO TechnoProm",
+    "city": "Chelyabinsk",
+    "cities": [
+      "Chelyabinsk"
+    ],
+    "lat": 55.164369,
+    "lon": 61.438783,
+    "stops": [
+      {
+        "name": "Chelyabinsk",
+        "lat": 55.164369,
+        "lon": 61.438783
+      }
+    ],
+    "cargo": "Building Materials",
+    "cargo_type": "fura",
+    "weight": 10.3,
+    "sum": 1524199.63,
+    "status": "InTransit"
+  },
+  {
+    "number": "ZK-49825-26",
+    "date": "2026-07-15",
+    "counteragent": "OOO AlphaStroy",
+    "city": "Veliky Novgorod",
+    "cities": [
+      "Samara",
+      "Veliky Novgorod"
+    ],
+    "lat": 58.508081,
+    "lon": 31.254323,
+    "stops": [
+      {
+        "name": "Samara",
+        "lat": 53.198755,
+        "lon": 50.10309
+      },
+      {
+        "name": "Veliky Novgorod",
+        "lat": 58.508081,
+        "lon": 31.254323
+      }
+    ],
+    "cargo": "Office Supplies",
+    "cargo_type": "fura",
+    "weight": 19.7,
+    "sum": 304347.84,
+    "status": "New"
+  }
+]

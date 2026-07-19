@@ -1,0 +1,171 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<definitions xmlns="http://schemas.xmlsoap.org/wsdl/"
+    xmlns:soap="http://schemas.xmlsoap.org/wsdl/soap/"
+    xmlns:tns="http://1c.ru/soap/data"
+    xmlns:xsd="http://www.w3.org/2001/XMLSchema"
+    name="DataService1C"
+    targetNamespace="http://1c.ru/soap/data">
+
+  <types>
+    <xsd:schema targetNamespace="http://1c.ru/soap/data"
+        elementFormDefault="qualified">
+
+      <!-- Контрагент -->
+      <xsd:element name="Контрагент" type="tns:КонтрагентType"/>
+      <xsd:complexType name="КонтрагентType">
+        <xsd:sequence>
+          <xsd:element name="Идентификатор" type="xsd:string"/>
+          <xsd:element name="Наименование" type="xsd:string"/>
+          <xsd:element name="ИНН" type="xsd:string"/>
+          <xsd:element name="КПП" type="xsd:string"/>
+          <xsd:element name="ЮридическийАдрес" type="xsd:string"/>
+          <xsd:element name="ФактическийАдрес" type="xsd:string"/>
+          <xsd:element name="Телефон" type="xsd:string"/>
+          <xsd:element name="Email" type="xsd:string"/>
+          <xsd:element name="КонтактноеЛицо" type="xsd:string"/>
+          <xsd:element name="ДатаРегистрации" type="xsd:dateTime"/>
+          <xsd:element name="ОКВЭД" type="xsd:string"/>
+          <xsd:element name="Статус" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Позиция заказа -->
+      <xsd:element name="Позиция" type="tns:ПозицияType"/>
+      <xsd:complexType name="ПозицияType">
+        <xsd:sequence>
+          <xsd:element name="НомерСтроки" type="xsd:int"/>
+          <xsd:element name="Номенклатура" type="xsd:string"/>
+          <xsd:element name="Количество" type="xsd:decimal"/>
+          <xsd:element name="ЕдиницаИзмерения" type="xsd:string"/>
+          <xsd:element name="Цена" type="xsd:decimal"/>
+          <xsd:element name="Сумма" type="xsd:decimal"/>
+          <xsd:element name="СтавкаНДС" type="xsd:string"/>
+          <xsd:element name="СуммаНДС" type="xsd:decimal"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Заказ -->
+      <xsd:element name="Заказ" type="tns:ЗаказType"/>
+      <xsd:complexType name="ЗаказType">
+        <xsd:sequence>
+          <xsd:element name="Номер" type="xsd:string"/>
+          <xsd:element name="Дата" type="xsd:dateTime"/>
+          <xsd:element name="КонтрагентИд" type="xsd:string"/>
+          <xsd:element name="КонтрагентНаименование" type="xsd:string"/>
+          <xsd:element name="Организация" type="xsd:string"/>
+          <xsd:element name="ХозяйственнаяОперация" type="xsd:string"/>
+          <xsd:element name="Валюта" type="xsd:string"/>
+          <xsd:element name="СуммаДокумента" type="xsd:decimal"/>
+          <xsd:element name="СуммаНДС" type="xsd:decimal"/>
+          <xsd:element name="Статус" type="xsd:string"/>
+          <xsd:element name="Позиции" type="tns:ПозицииType"/>
+          <xsd:element name="Комментарий" type="xsd:string"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="ПозицииType">
+        <xsd:sequence>
+          <xsd:element maxOccurs="unbounded" minOccurs="0"
+              name="Позиция" type="tns:ПозицияType"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="КонтрагентыType">
+        <xsd:sequence>
+          <xsd:element maxOccurs="unbounded" minOccurs="0"
+              name="Контрагент" type="tns:КонтрагентType"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <xsd:complexType name="ЗаказыType">
+        <xsd:sequence>
+          <xsd:element maxOccurs="unbounded" minOccurs="0"
+              name="Заказ" type="tns:ЗаказType"/>
+        </xsd:sequence>
+      </xsd:complexType>
+
+      <!-- Запрос/Ответ операций -->
+      <xsd:element name="ПолучитьКонтрагентов">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="Количество" type="xsd:int" minOccurs="0" default="5"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="ПолучитьКонтрагентовResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="Результат" type="tns:КонтрагентыType"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="ПолучитьЗаказы">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="КонтрагентИд" type="xsd:string" minOccurs="0"/>
+            <xsd:element name="Количество" type="xsd:int" minOccurs="0" default="10"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+      <xsd:element name="ПолучитьЗаказыResponse">
+        <xsd:complexType>
+          <xsd:sequence>
+            <xsd:element name="Результат" type="tns:ЗаказыType"/>
+          </xsd:sequence>
+        </xsd:complexType>
+      </xsd:element>
+
+    </xsd:schema>
+  </types>
+
+  <!-- Сообщения -->
+  <message name="ПолучитьКонтрагентов">
+    <part name="parameters" element="tns:ПолучитьКонтрагентов"/>
+  </message>
+  <message name="ПолучитьКонтрагентовResponse">
+    <part name="parameters" element="tns:ПолучитьКонтрагентовResponse"/>
+  </message>
+  <message name="ПолучитьЗаказы">
+    <part name="parameters" element="tns:ПолучитьЗаказы"/>
+  </message>
+  <message name="ПолучитьЗаказыResponse">
+    <part name="parameters" element="tns:ПолучитьЗаказыResponse"/>
+  </message>
+
+  <!-- Порт -->
+  <portType name="DataServicePortType">
+    <operation name="ПолучитьКонтрагентов">
+      <input message="tns:ПолучитьКонтрагентов"/>
+      <output message="tns:ПолучитьКонтрагентовResponse"/>
+    </operation>
+    <operation name="ПолучитьЗаказы">
+      <input message="tns:ПолучитьЗаказы"/>
+      <output message="tns:ПолучитьЗаказыResponse"/>
+    </operation>
+  </portType>
+
+  <!-- Байндинг -->
+  <binding name="DataServiceBinding" type="tns:DataServicePortType">
+    <soap:binding style="document" transport="http://schemas.xmlsoap.org/soap/http"/>
+    <operation name="ПолучитьКонтрагентов">
+      <soap:operation soapAction="http://1c.ru/soap/data/ПолучитьКонтрагентов"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+    <operation name="ПолучитьЗаказы">
+      <soap:operation soapAction="http://1c.ru/soap/data/ПолучитьЗаказы"/>
+      <input><soap:body use="literal"/></input>
+      <output><soap:body use="literal"/></output>
+    </operation>
+  </binding>
+
+  <!-- Сервис -->
+  <service name="DataService1C">
+    <port name="DataServicePort" binding="tns:DataServiceBinding">
+      <soap:address location="http://localhost:5000/"/>
+    </port>
+  </service>
+</definitions>

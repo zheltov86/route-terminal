@@ -1,0 +1,5 @@
+__pycache__/
+*.pyc
+routes_cache.json
+*.log
+.env
