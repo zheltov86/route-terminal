@@ -1,8 +1,16 @@
 from flask import Flask, jsonify, Response, request
 import json, os, random
+from datetime import datetime
 from logic import генерация_заказа, генерация_заказов, генерация_заказов_clark_wright, min_cost_flow, оптимизация_бюджета, ГОРОДА, СКЛАД
 
 app = Flask(__name__)
+DATA_FILE = os.path.join(os.path.dirname(__file__), "orders.json")
+
+def load_orders():
+    if os.path.exists(DATA_FILE):
+        with open(DATA_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return []
 
 @app.route("/")
 def index(): return Response(HTML, mimetype="text/html")
@@ -33,6 +41,114 @@ def api_budget_optimize():
 @app.route("/api/orders")
 def api_orders():
     return jsonify(load_orders())
+
+@app.route("/api/export/xml")
+def api_export_xml():
+    """Выгрузка заказов в формате EnterpriseData 1.8"""
+    from flask import Response as Resp
+    import uuid
+
+    now = datetime.now().strftime("%Y-%m-%dT%H:%M:%S")
+
+    org_ref = "553d56f1-8295-11f1-8af8-04ecd881cf53"
+    org_name = "Управленческая организация"
+    cur_ref = "7e3e0ef4-8295-11f1-8af8-04ecd881cf53"
+    cur_name = "руб."
+
+    xml = '<?xml version="1.0" encoding="UTF-8"?>\n'
+    xml += '<Message xmlns:msg="http://www.1c.ru/SSL/Exchange/Message" xmlns:xs="http://www.w3.org/2001/XMLSchema" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance">\n'
+    xml += '\t<msg:Header>\n'
+    xml += '\t\t<msg:Format>http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.8</msg:Format>\n'
+    xml += f'\t\t<msg:CreationDate>{now}</msg:CreationDate>\n'
+    xml += '\t\t<msg:AvailableVersion>1.8</msg:AvailableVersion>\n'
+    xml += '\t</msg:Header>\n'
+    xml += '\t<Body xmlns="http://v8.1c.ru/edi/edi_stnd/EnterpriseData/1.8">\n'
+
+    # Справочники
+    xml += '\t\t<Справочник.Валюты>\n'
+    xml += '\t\t\t<КлючевыеСвойства>\n'
+    xml += f'\t\t\t\t<Ссылка>{cur_ref}</Ссылка>\n'
+    xml += '\t\t\t\t<ДанныеКлассификатора>\n'
+    xml += '\t\t\t\t\t<Код>643</Код>\n'
+    xml += '\t\t\t\t\t<Наименование>руб.</Наименование>\n'
+    xml += '\t\t\t\t</ДанныеКлассификатора>\n'
+    xml += '\t\t\t</КлючевыеСвойства>\n'
+    xml += '\t\t</Справочник.Валюты>\n'
+
+    xml += '\t\t<Справочник.Организации>\n'
+    xml += '\t\t\t<КлючевыеСвойства>\n'
+    xml += f'\t\t\t\t<Ссылка>{org_ref}</Ссылка>\n'
+    xml += f'\t\t\t\t<Наименование>{org_name}</Наименование>\n'
+    xml += '\t\t\t\t<ЮридическоеФизическоеЛицо>ЮридическоеЛицо</ЮридическоеФизическоеЛицо>\n'
+    xml += '\t\t\t</КлючевыеСвойства>\n'
+    xml += '\t\t</Справочник.Организации>\n'
+
+    # Заказы
+    for order in load_orders():
+        order_ref = str(uuid.uuid4())
+        client_ref = str(uuid.uuid4())
+        num = order.get("number", "")
+        date = order.get("date", "")
+        amount = order.get("amount", 0)
+        comment = order.get("comment", "")
+        items = order.get("items", [])
+
+        xml += '\t\t<Документ.ЗаказКлиента>\n'
+        xml += '\t\t\t<КлючевыеСвойства>\n'
+        xml += f'\t\t\t\t<Ссылка>{order_ref}</Ссылка>\n'
+        xml += f'\t\t\t\t<Номер>{num}</Номер>\n'
+        xml += f'\t\t\t\t<Дата>{date}T00:00:00</Дата>\n'
+        xml += '\t\t\t\t<Проведен>true</Проведен>\n'
+        xml += '\t\t\t</КлючевыеСвойства>\n'
+        xml += '\t\t\t<Организация>\n'
+        xml += f'\t\t\t\t<Ссылка>{org_ref}</Ссылка>\n'
+        xml += f'\t\t\t\t<Наименование>{org_name}</Наименование>\n'
+        xml += '\t\t\t</Организация>\n'
+        xml += '\t\t\t<Контрагент>\n'
+        xml += f'\t\t\t\t<Ссылка>{client_ref}</Ссылка>\n'
+        xml += f'\t\t\t\t<Наименование>{order.get("client_name","Клиент")}</Наименование>\n'
+        xml += '\t\t\t</Контрагент>\n'
+        xml += '\t\t\t<Валюта>\n'
+        xml += f'\t\t\t\t<Ссылка>{cur_ref}</Ссылка>\n'
+        xml += f'\t\t\t\t<Наименование>{cur_name}</Наименование>\n'
+        xml += '\t\t\t</Валюта>\n'
+        xml += f'\t\t\t<Сумма>{amount}</Сумма>\n'
+        xml += f'\t\t\t<Комментарий>{comment}</Комментарий>\n'
+        xml += '\t\t\t<Товары>\n'
+
+        for item in items:
+            item_ref = str(uuid.uuid4())
+            unit_ref = str(uuid.uuid4())
+            qty = item.get("quantity", 0)
+            price = item.get("price", 0)
+            sum_val = item.get("sum", 0)
+            vat_rate = item.get("vat_rate", "НДС20")
+            vat_sum = round(sum_val * 0.2, 2) if vat_rate == "НДС20" else 0
+
+            xml += '\t\t\t\t<Строка>\n'
+            xml += f'\t\t\t\t\t<НомерСтрокиДокумента>{item.get("line","")}</НомерСтрокиДокумента>\n'
+            xml += '\t\t\t\t\t<ДанныеНоменклатуры>\n'
+            xml += f'\t\t\t\t\t\t<Ссылка>{item_ref}</Ссылка>\n'
+            xml += f'\t\t\t\t\t\t<Наименование>{item.get("nomenclature_name","")}</Наименование>\n'
+            xml += '\t\t\t\t\t</ДанныеНоменклатуры>\n'
+            xml += '\t\t\t\t\t<ЕдиницаИзмерения>\n'
+            xml += f'\t\t\t\t\t\t<Ссылка>{unit_ref}</Ссылка>\n'
+            xml += f'\t\t\t\t\t\t<Наименование>{item.get("unit_name","шт")}</Наименование>\n'
+            xml += '\t\t\t\t\t</ЕдиницаИзмерения>\n'
+            xml += f'\t\t\t\t\t<Количество>{qty}</Количество>\n'
+            xml += f'\t\t\t\t\t<Цена>{price}</Цена>\n'
+            xml += f'\t\t\t\t\t<Сумма>{sum_val}</Сумма>\n'
+            xml += f'\t\t\t\t\t<СтавкаНДС>{vat_rate}</СтавкаНДС>\n'
+            xml += f'\t\t\t\t\t<СуммаНДС>{vat_sum}</СуммаНДС>\n'
+            xml += '\t\t\t\t</Строка>\n'
+
+        xml += '\t\t\t</Товары>\n'
+        xml += '\t\t</Документ.ЗаказКлиента>\n'
+
+    xml += '\t</Body>\n'
+    xml += '</Message>'
+
+    return Resp(xml, mimetype="text/xml; charset=utf-8")
 
 HTML = r"""<!DOCTYPE html>
 <html lang="ru">
