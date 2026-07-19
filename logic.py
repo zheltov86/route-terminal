@@ -248,3 +248,201 @@ def получить_города():
 def получить_склад():
     """Данные склада."""
     return СКЛАД
+
+
+# ══════════════════════════════════════════════
+# АЛГОРИТМЫ ОПТИМИЗАЦИИ
+# ══════════════════════════════════════════════
+
+def clark_wright(клиенты, K=22):
+    """Алгоритм Кларка-Райта (Savings Algorithm).
+    Оптимальное объединение клиентов в маршруты с ограничением грузоподъёма K (тонн).
+
+    Алгоритм:
+    1. Строим матрицу savings: s(i,j) = d(0,i) + d(0,j) - d(i,j)
+       где 0 — depot, i,j — клиенты.
+    2. Сортируем пары по убыванию savings.
+    3. Объединяем клиентов в маршруты, если:
+       - оба клиента ещё не в маршруте
+       - суммарный вес не превышает K
+       - объединение не нарушает порядок
+    """
+    depot = {"lat": СКЛАД["lat"], "lon": СКЛАД["lon"]}
+    n = len(клиенты)
+
+    # Матрица расстояний depot → клиент
+    d0 = [расстояние(depot["lat"], depot["lon"], к["lat"], к["lon"]) for к in клиенты]
+
+    # Savings: s(i,j) = d0[i] + d0[j] - d(i,j)
+    savings = []
+    for i in range(n):
+        for j in range(i + 1, n):
+            d_ij = расстояние(клиенты[i]["lat"], клиенты[i]["lon"], клиенты[j]["lat"], клиенты[j]["lon"])
+            s = d0[i] + d0[j] - d_ij
+            savings.append((s, i, j, d_ij))
+
+    savings.sort(key=lambda x: -x[0])  # по убыванию
+
+    # Инициализация: каждый клиент — отдельный маршрут
+    routes = [{"clients": [i], "weight": клиенты[i]["weight"], "dist": d0[i] * 2} for i in range(n)]
+    client_route = {i: i for i in range(n)}  # клиент → индекс маршрута
+
+    # Объединение
+    for s, i, j, d_ij in savings:
+        ri = client_route.get(i)
+        rj = client_route.get(j)
+        if ri is None or rj is None or ri == rj:
+            continue
+        route_i = routes[ri]
+        route_j = routes[rj]
+        new_weight = route_i["weight"] + route_j["weight"]
+        if new_weight > K:
+            continue
+        # Объединяем: route_i + route_j
+        route_i["clients"].extend(route_j["clients"])
+        route_i["weight"] = new_weight
+        route_i["dist"] = route_i["dist"] + route_j["dist"] - d0[i] - d0[j] + d_ij
+        for c in route_j["clients"]:
+            client_route[c] = ri
+        route_j["clients"] = []
+        route_j["weight"] = 0
+        route_j["dist"] = 0
+
+    # Формируем результат
+    result = []
+    for route in routes:
+        if not route["clients"]:
+            continue
+        points = [{"name": "Depot", "lat": depot["lat"], "lon": depot["lon"]}]
+        total_dist = 0
+        prev_lat, prev_lon = depot["lat"], depot["lon"]
+        for ci in route["clients"]:
+            к = клиенты[ci]
+            seg = расстояние(prev_lat, prev_lon, к["lat"], к["lon"])
+            total_dist += seg
+            points.append({"name": к.get("name", f"Client {ci}"), "lat": к["lat"], "lon": к["lon"], "weight": к["weight"]})
+            prev_lat, prev_lon = к["lat"], к["lon"]
+        total_dist += расстояние(prev_lat, prev_lon, depot["lat"], depot["lon"])
+        result.append({
+            "points": points,
+            "weight": route["weight"],
+            "distance_km": round(total_dist, 1),
+            "duration_hours": round(total_dist / 80, 1),
+            "transport_cost": стоимость_перевозки(total_dist, route["weight"]),
+        })
+
+    return result
+
+
+def min_cost_flow(источники, приемники, K=150):
+    """Поток минимальной стоимости (Min-Cost Flow).
+    Оптимальное распределение ресурсов от источников к приемникам.
+
+    Алгоритм (жадный):
+    1. Строим матрицу стоимостей: cost(i,j) = расстояние(i,j)
+    2. Для каждого приемника ищем ближайший источник
+    3. Заполняем приемник до K (или остатка ресурса)
+    4. Минимизируем суммарную стоимость
+    """
+    result = []
+    total_cost = 0
+    total_delivered = 0
+
+    # Копируем остатки ресурсов
+    остатки = [{"lat": и["lat"], "lon": и["lon"], "name": и.get("name", ""), "rest": и["weight"]} for и in источники]
+
+    for п in приемники:
+        remaining = K
+        allocations = []
+        п_lat, п_lon = п["lat"], п["lon"]
+
+        # Сортируем источники по расстоянию до приемника
+        sorted_sources = sorted(range(len(остатки)), key=lambda i: расстояние(остатки[i]["lat"], остатки[i]["lon"], п_lat, п_lon))
+
+        for si in sorted_sources:
+            if remaining <= 0 or остатки[si]["rest"] <= 0:
+                continue
+            amount = min(remaining, остатки[si]["rest"])
+            dist = расстояние(остатки[si]["lat"], остатки[si]["lon"], п_lat, п_lon)
+            cost = round(dist * amount)
+            allocations.append({
+                "source": остатки[si]["name"],
+                "amount": amount,
+                "distance_km": dist,
+                "cost": cost,
+            })
+            остатки[si]["rest"] -= amount
+            remaining -= amount
+            total_cost += cost
+            total_delivered += amount
+
+        result.append({
+            "receiver": п.get("name", ""),
+            "lat": п_lat,
+            "lon": п_lon,
+            "capacity": K,
+            "filled": K - remaining,
+            "allocations": allocations,
+        })
+
+    return {"distributions": result, "total_cost": total_cost, "total_delivered": total_delivered}
+
+
+def генерация_заказов_clark_wright(count=10, K=22):
+    """Генерация оптимальных заказов через Clark-Wright."""
+    # Генерируем клиентов (точки назначения)
+    клиенты = []
+    used = set()
+    for _ in range(count):
+        while True:
+            город = random.choice(ГОРОДА)
+            if город["name"] not in used:
+                used.add(город["name"])
+                lat, lon = генерация_точки(город)
+                вес = round(random.uniform(5, 15), 1)
+                клиенты.append({"name": город["name"], "lat": lat, "lon": lon, "weight": вес})
+                break
+
+    routes = clark_wright(клиенты, K)
+
+    # Формируем заказы из маршрутов
+    заказы = []
+    for route in routes:
+        items = random.sample(ТОВАРЫ, random.randint(2, 4))
+        order_items = []
+        total = 0
+        for i, t in enumerate(items, 1):
+            qty = random.randint(1, 10)
+            s = round(t["price"] * qty, 2)
+            total += s
+            order_items.append({"line": i, "item": t["name"], "qty": qty, "unit": t["unit"], "price": t["price"], "sum": s})
+
+        stops = [{"name": p["name"], "lat": p["lat"], "lon": p["lon"]} for p in route["points"][1:]]
+        cities_route = " → ".join(["Москва"] + [p["name"] for p in route["points"][1:]])
+
+        заказы.append({
+            "number": "ZK-" + str(random.randint(10000, 99999)) + "-26",
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "counteragent": random.choice(КОНТРАГЕНТЫ),
+            "from_city": СКЛАД["city"],
+            "from_lat": СКЛАД["lat"],
+            "from_lon": СКЛАД["lon"],
+            "to_city": stops[-1]["name"] if stops else СКЛАД["city"],
+            "to_lat": stops[-1]["lat"] if stops else СКЛАД["lat"],
+            "to_lon": stops[-1]["lon"] if stops else СКЛАД["lon"],
+            "cities_route": cities_route,
+            "stops": stops,
+            "cargo": random.choice(ГРУЗЫ),
+            "cargo_type": "фура",
+            "weight": route["weight"],
+            "distance_km": route["distance_km"],
+            "duration_hours": route["duration_hours"],
+            "transport_cost": route["transport_cost"],
+            "sum": round(total, 2),
+            "status": random.choice(СТАТУСЫ),
+            "items": order_items,
+            "coords": [],  # polyline будет построен на клиенте
+            "has_route": True,
+        })
+
+    return заказы

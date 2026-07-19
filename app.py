@@ -1,6 +1,6 @@
-from flask import Flask, jsonify, Response
-import json, os
-from logic import генерация_заказа, генерация_заказов
+from flask import Flask, jsonify, Response, request
+import json, os, random
+from logic import генерация_заказа, генерация_заказов, генерация_заказов_clark_wright, min_cost_flow, ГОРОДА, СКЛАД
 
 app = Flask(__name__)
 
@@ -10,6 +10,20 @@ def index(): return Response(HTML, mimetype="text/html")
 @app.route("/api/random-order")
 def api_random_order():
     return jsonify(генерация_заказа())
+
+@app.route("/api/optimal-orders")
+def api_optimal_orders():
+    count = int(request.args.get("count", 10))
+    K = int(request.args.get("K", 22))
+    return jsonify(генерация_заказов_clark_wright(count, K))
+
+@app.route("/api/distribute")
+def api_distribute():
+    # Генерируем источники и приемники
+    sources = [{"name": ГОРОДА[i]["name"], "lat": ГОРОДА[i]["lat"], "lon": ГОРОДА[i]["lon"], "weight": random.randint(20, 100)} for i in range(min(5, len(ГОРОДА)))]
+    receivers = [{"name": ГОРОДА[i]["name"], "lat": ГОРОДА[i]["lat"], "lon": ГОРОДА[i]["lon"]} for i in range(5, min(15, len(ГОРОДА)))]
+    K = int(request.args.get("K", 150))
+    return jsonify(min_cost_flow(sources, receivers, K))
 
 @app.route("/api/orders")
 def api_orders():
@@ -113,6 +127,9 @@ tr.active td{background:rgba(52,211,153,.1)!important}
     <button class="btn pri" id="bAdd">+ Order</button>
     <button class="btn" id="bAdd5">+5</button>
     <button class="btn" id="bAuto">Auto 10s</button>
+    <div class="sep"></div>
+    <button class="btn" id="bOptimal" style="border-color:#22d3ee;color:#22d3ee">Clark-Wright</button>
+    <button class="btn" id="bDistrib" style="border-color:#a78bfa;color:#a78bfa">Min-Cost</button>
     <div class="sep"></div>
     <button class="btn dng" id="bClear">Clear</button>
     <div class="sep"></div>
@@ -354,6 +371,19 @@ document.getElementById('bAuto').onclick=function(){
   var b=document.getElementById('bAuto');
   if(autoI){clearInterval(autoI);autoI=null;b.textContent='Auto 10s';b.classList.remove('on');}
   else{addOneOrder();autoI=setInterval(addOneOrder,10000);b.textContent='Stop';b.classList.add('on');}
+};
+
+document.getElementById('bOptimal').onclick=function(){
+  fetch('/api/optimal-orders?count=8&K=22').then(function(r){return r.json()}).then(function(arr){
+    arr.forEach(function(o){orders.unshift(o);addRow(o,true);drawRoute(o);});
+    updateStats();
+  });
+};
+
+document.getElementById('bDistrib').onclick=function(){
+  fetch('/api/distribute?K=150').then(function(r){return r.json()}).then(function(d){
+    alert('Min-Cost Flow: delivered '+d.total_delivered+' units, cost: '+d.total_cost.toLocaleString()+' rub');
+  });
 };
 document.getElementById('bClear').onclick=function(){
   orders=[];cIdx=0;activeF='all';activeV=null;selectedNum=null;
